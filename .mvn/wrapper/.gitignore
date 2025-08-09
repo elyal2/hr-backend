@@ -1,1 +1,4 @@
 maven-wrapper.jar
+.env
+.env.local
+.env.*.local

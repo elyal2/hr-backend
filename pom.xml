@@ -96,9 +96,7 @@
             <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
 
-        <!-- UUID generation is available via java.util.UUID -->
-
-        <!-- MicroProfile Config para @ConfigProperty -->
+        <!-- Cargar Variables de entorno -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-config-yaml</artifactId>
