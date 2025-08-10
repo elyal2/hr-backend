@@ -26,15 +26,17 @@ Los siguientes objetivos se traducen directamente en issues de implementación:
 
 #### ✅ Base de Datos y Persistencia (COMPLETADO)
 - [x] Implementar PostgreSQL con Row Level Security por tenant
-- [x] Configurar Flyway para gestión de migraciones
-- [x] Activar auditoría de cambios con Hibernate Envers
+- [x] Configurar Flyway para gestión de migraciones (incl. V1.2.0, V1.2.1, V1.3.0)
+- [x] Activar auditoría de cambios con Hibernate Envers (revinfo con id long)
 - [x] Establecer modelo de datos multi-tenant con ObjectID composite
+- [x] Constraints de estado (CHECK) para `users` y `tenant`
 
-#### ✅ Seguridad y Autenticación (PARCIALMENTE COMPLETADO)
+#### ✅ Seguridad y Autenticación (COMPLETADO)
 - [x] Integrar Auth0 para OAuth2/OIDC (configuración base)
-- [ ] Implementar JWT token validation en backend
-- [ ] Configurar cifrado en tránsito y reposo (GDPR compliant)
-- [ ] Establecer control de acceso basado en roles y tenants
+- [x] Extractor de tenant desde JWT (`JWTSecurityInterceptor`) y propagación de contexto
+- [x] Interceptor de conexión para `set_config('app.current_tenant', ...)` en la misma conexión JPA
+- [x] Endpoints con autorización por roles/permisos (`@RolesAllowed`)
+- [ ] Cifrado en tránsito y reposo (GDPR compliant)
 
 #### ✅ Backend (COMPLETADO)
 - [x] Configurar Quarkus 3.x con Java 21 LTS
@@ -76,31 +78,6 @@ Los siguientes objetivos se traducen directamente en issues de implementación:
 📊 Auditoría: Hibernate Envers
 🛠️ Build: Maven 3.8+
 ⚡ Concurrencia: Virtual Threads (Project Loom)
-📨 Messaging: AWS SNS/SQS (producción) + simulación local
-```
-
-#### Stack Frontend (Proyecto Separado)
-```
-⚛️ Framework: React 18.2.0
-🛣️ Routing: React Router DOM
-🔐 Auth: Auth0 React SDK
-🎨 UI Framework: Bootstrap 5.3.0
-🧩 Componentes: Reactstrap
-📡 HTTP Client: Axios
-🌐 CORS: Configuración para comunicación con backend API
-🚀 Despliegue: Vercel/Netlify (independiente del backend)
-```
-
-#### Infraestructura
-```
-☁️ Cloud Provider: AWS (futuro)
-🐳 Containerización: Docker ✅
-📦 Backend: AWS ECS/EKS (futuro)
-🌐 Frontend: Vercel/Netlify (futuro)
-🔑 Gestión de Secretos: AWS KMS (futuro)
-📊 Monitorización: CloudWatch + Grafana (futuro)
-📨 Messaging: AWS SNS + SQS (futuro)
-🔄 CI/CD: AWS CodePipeline + GitHub Actions (futuro)
 ```
 
 ### 6. Estado Actual de Implementación
@@ -110,55 +87,73 @@ Los siguientes objetivos se traducen directamente en issues de implementación:
 **Infraestructura Local:**
 - PostgreSQL 15 ejecutándose en Docker
 - Flyway configurado y funcionando
-- 3 migraciones aplicadas exitosamente
+- Migraciones `users/tenants`, `revinfo`, `constraints`, y `drop account legacy`
 - Row Level Security (RLS) implementado y probado
 
 **Backend Funcional:**
 - Quarkus 3.x + Java 21 LTS funcionando
 - Hibernate ORM + Panache configurado
-- Hibernate Envers para auditoría
-- Auth0 OIDC configurado (pendiente endpoints protegidos)
+- Hibernate Envers con `revinfo` (id long)
+- Auth0 OIDC configurado y protección fina por permisos via `@RolesAllowed`
 - Health checks y OpenAPI disponibles
 
 **Modelo de Datos Multi-tenant:**
-- ObjectID composite key implementado
-- ExtendedAttribute para flexibilidad
-- Account entity con auditoría completa
-- Tenant isolation verificado y funcionando
+- `ObjectID` como `@EmbeddedId` en `Tenant` y `User`
+- `ExtendedAttribute` para flexibilidad (tablas secundarias)
+- CRUD de `Tenant` y `User` con auditoría, roles y atributos extendidos
+- Aislamiento por tenant verificado y funcionando
 
-**Arquitectura de Código:**
+**Arquitectura de Código (extracto):**
 ```
 src/main/java/com/humanrsc/
+├── config/
 ├── datamodel/
 │   ├── abstraction/
-│   │   ├── ObjectID.java ✅
-│   │   └── ExtendedAttribute.java ✅
-│   └── entities/
-│       └── Account.java ✅
-├── repo/
-│   └── AccountRepository.java ✅
-└── services/
-    ├── AccountService.java ✅
-    └── TenantContextService.java ✅
+│   └── entities/ (Tenant, User)
+├── datamodel/repo/ (TenantRepository, UserRepository)
+├── history/ (AuditRevisionEntity, AuditRevisionListener)
+├── resources/ (TenantResource, UserResource, DebugResource)
+├── security/ (JWTSecured, JWTSecurityInterceptor, JwtTokenUtils)
+└── services/ (TenantContextService, TenantService, UserService)
 ```
 
 **Base de Datos:**
 ```sql
--- Tablas creadas y funcionando:
-hr_app.account ✅
-hr_app.account_extended_attributes ✅
-hr_app.account_aud ✅ (Envers)
-hr_app.revinfo ✅ (Envers)
-hr_app.system_info ✅
+-- Tablas clave multi-tenant
+hr_app.tenant
+hr_app.tenant_extended_attributes
+hr_app.users
+hr_app.user_roles
+hr_app.user_extended_attributes
+
+-- Auditoría
+hr_app.revinfo (Envers, id long)
+
+-- RLS activo + policies por tenant
+
+-- Legacy limpiado
+DROP hr_app.account*, migración V1.3.0
 ```
+
+**Seguridad / Contexto de Tenant:**
+- `JWTSecurityInterceptor` (@Priority(LIBRARY_BEFORE)) extrae el tenant del JWT y lo propaga (ThreadLocal + `set_config`)
+- `ConnectionPoolInterceptor` (@Priority(APPLICATION)) asegura `set_config` en la misma conexión JPA antes de ejecutar lógica
+- `/debug/me` auto-provisiona usuario si no existe y actualiza roles/último login si existe
+ - Autorización en endpoints con `@RolesAllowed` usando permisos del JWT (`quarkus.oidc.roles.role-claim-path=permissions`).
+ - Catálogo de permisos centralizado en `security/Permissions.java` (evita magic strings).
+ - Alcance por tenant garantizado por RLS; los permisos de lectura como `read:users` solo exponen datos del tenant actual.
+ - Debug:
+   - `GET /debug/me` requiere autenticación (cualquier usuario autenticado).
+   - `GET /debug/token` requiere permiso `audit:read`.
 
 #### 🔄 EN PROGRESO (Fase 2)
 
 **Pendiente próxima sesión:**
-- Crear endpoints REST protegidos
-- Implementar autenticación Auth0 completa
-- Testing de JWT validation
-- CORS configuration para frontend
+- Protección fina de endpoints con `@RolesAllowed`/`@Permissions` por operación
+- Tests de validación JWT y autorización (incl. multi-tenant cross-check)
+- Validaciones adicionales en DTOs/endpoints (Bean Validation)
+- CORS y Frontend React (autenticación e integración de `/me`)
+- Tests de integración (RLS efectivo con múltiples tenants)
 
 ### 7. Configuración de Desarrollo ✅
 
@@ -183,6 +178,9 @@ Version: 1.0.0-SNAPSHOT
 - SmallRye Health ✅
 - SmallRye Metrics ✅
 - SmallRye OpenAPI ✅
+ 
+#### Logging
+- Uso consistente de `io.quarkus.logging.Log` para trazas (`Log.infof`, `Log.warnf`, `Log.errorf`).
 
 #### Setup Local:
 ```bash
@@ -199,37 +197,38 @@ curl http://localhost:8080/q/swagger-ui
 
 ### 8. Endpoints Disponibles ✅
 
-- **Health Check:** http://localhost:8080/q/health
-- **Swagger UI:** http://localhost:8080/q/swagger-ui
-- **Métricas:** http://localhost:8080/q/metrics
-- **Hello World:** http://localhost:8080/hello
+- Swagger UI: http://localhost:8080/q/swagger-ui
+- Health Check: http://localhost:8080/q/health
+- Métricas: http://localhost:8080/q/metrics
+- Debug (provisioning): `GET /debug/me`
+- Debug (token dump): `GET /debug/token`
+- Users API: `GET/POST /users`, `GET/PUT/DELETE /users/{id}`, filtros por `status` y `role`, `GET /users/count`
+- Tenants API: `GET/POST /tenants`, `GET/PUT /tenants/{id}`, activar/suspender/desactivar, stats, búsquedas por `domain` y `status`
 
 ### 9. Verificación Multi-tenant ✅
 
 ```sql
--- Verificar RLS funciona
+-- Verificar RLS con el mismo esquema de contexto
 SELECT set_config('app.current_tenant', 'demo-tenant', false);
-SELECT * FROM hr_app.account;
--- Retorna solo datos del tenant 'demo-tenant'
+SELECT COUNT(*) FROM hr_app.users;  -- Solo del tenant demo-tenant
 
-SELECT set_config('app.current_tenant', 'other-tenant', false);  
-SELECT * FROM hr_app.account;
--- Retorna solo datos del tenant 'other-tenant'
+SELECT set_config('app.current_tenant', 'other-tenant', false);
+SELECT COUNT(*) FROM hr_app.users;  -- Solo del tenant other-tenant
 ```
 
 ### 10. Próximos Pasos (Fase 2)
 
 #### Prioridad Alta:
-1. **AccountResource** - CRUD completo para Account
-2. **JWT Authentication** - Endpoints protegidos
-3. **Tenant Context Integration** - Interceptor automático
-4. **CORS Configuration** - Para frontend separado
+1. Autorización por endpoint (`@RolesAllowed`) + pruebas de acceso
+2. Validación JWT end-to-end (Auth0) y escopos/permissions
+3. CORS + integración con Frontend React
+4. Migración/retirada de `Account` si procede (script de migración)
 
 #### Prioridad Media:
-5. **Error Handling** - Manejo consistente de errores
-6. **Validation** - Bean Validation en endpoints
-7. **Testing** - Tests unitarios e integración
-8. **Docker backend** - Containerización completa
+5. Manejo consistente de errores (mappeo de excepciones)
+6. Validación en endpoints (DTOs con Bean Validation)
+7. Tests unitarios e integración (incl. RLS multi-tenant)
+8. Containerización completa del backend
 
 ### 11. Comandos Útiles
 
@@ -252,26 +251,25 @@ docker exec -it hr-postgres-dev psql -U postgres -d humanrsc -c "SELECT * FROM h
 
 ### 12. Problemas Resueltos ✅
 
-1. **Flyway migrations** - Versionado correcto implementado
-2. **Hibernate Envers** - Secuencias configuradas correctamente  
-3. **RLS (Row Level Security)** - Tenant isolation funcionando
-4. **Java 21** - Virtual Threads configurados
-5. **Lombok** - Annotation processing funcionando
-6. **Multi-tenant data model** - ObjectID composite implementado
+1. Flyway migrations multi-tenant (`users`, `tenant`, atributos y policies RLS)
+2. Hibernate Envers con `revinfo` (id long) y políticas estables
+3. RLS (Row Level Security): Tenant isolation funcionando con `set_config`
+4. Interceptores: orden de ejecución claro con prioridades constantes
+5. Bean Validation aplicada a entidades clave
 
 ### 13. Métricas de Éxito Actuales ✅
 
 #### Técnicas
-- **Application Startup:** ~15 segundos ✅
-- **Build Time:** < 6 segundos ✅
-- **Database Migrations:** 3 aplicadas exitosamente ✅
-- **Health Checks:** Respondiendo OK ✅
+- Application Startup: ~15 segundos ✅
+- Build Time: < 6 segundos ✅
+- Database Migrations: 5 definidas ✅
+- Health Checks: Respondiendo OK ✅
 
 #### Funcionales
-- **Multi-tenancy:** RLS verificado ✅
-- **Auditoría:** Envers configurado ✅
-- **Extensibilidad:** ExtendedAttribute funcionando ✅
-- **Database Schema:** Completamente funcional ✅
+- Multi-tenancy: RLS verificado ✅
+- Auditoría: Envers configurado ✅
+- Extensibilidad: ExtendedAttribute funcionando ✅
+- Esquema de BD: Usuarios y Tenants operativos ✅
 
 ---
 
@@ -279,17 +277,16 @@ docker exec -it hr-postgres-dev psql -U postgres -d humanrsc -c "SELECT * FROM h
 
 **✅ LOGROS:**
 - Stack tecnológico moderno funcionando (Quarkus 3.x + Java 21)
-- Base de datos multi-tenant con RLS
-- Auditoría completa con Envers
-- Arquitectura extensible y profesional
-- Migraciones automatizadas con Flyway
-- Configuración limpia y sin warnings
+- Multi-tenant con RLS, interceptores y contexto de tenant consistente
+- Auditoría con Envers (revinfo id long) y fechas de estado
+- CRUD de `Users` y `Tenants` con atributos extendidos y roles
+- Migraciones automatizadas con Flyway, constraints de estado y uniqueness
 
 **🚀 PRÓXIMO:**
-- Fase 2: Auth0 + REST APIs completas
-- Testing de autenticación real
-- Frontend React separado
+- Fase 2: Autorización por roles/permisos + JWT e2e
+- Testing de autenticación real y RLS multi-tenant
+- Frontend React separado e integración con `/debug/me`
 
 **Tiempo invertido Fase 1:** ~4 horas  
 **Estado:** ✅ COMPLETADA AL 100%  
-**Siguiente sesión:** Fase 2 - Auth0 + REST APIs
+**Siguiente sesión:** Fase 2 - Auth0 + REST APIs protegidas

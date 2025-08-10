@@ -3,6 +3,8 @@ package com.humanrsc.datamodel.entities;
 import com.humanrsc.datamodel.abstraction.ExtendedAttribute;
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.envers.Audited;
@@ -11,41 +13,50 @@ import org.hibernate.envers.NotAudited;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 @Entity
-@Table(name = "account", schema = "hr_app")
+@Table(name = "tenant", schema = "hr_app")
 @Getter
 @Setter
-public class Account {
+public class Tenant {
 
-    public static final int STATUS_FREE = 1;
-    public static final int STATUS_PAY = 2;
-    public static final int STATUS_SUSPENDED = 3;
-    public static final int STATUS_DELETED = 4;
+    public static final String STATUS_ACTIVE = "active";
+    public static final String STATUS_INACTIVE = "inactive";
+    public static final String STATUS_SUSPENDED = "suspended";
+    public static final String STATUS_PENDING = "pending";
 
     @EmbeddedId
+    @NotNull
     private ObjectID objectID;
 
+    @NotBlank
+    @Column(nullable = false)
     private String name;
-    private String surname;
-
+    
+    private String domain;
+    
     @Audited
-    private Integer status = STATUS_FREE;
+    @NotBlank
+    @Column(nullable = false, length = 50)
+    private String status = STATUS_PENDING;
 
-    private String email;
-
-    @Column(name = "date_registered")
-    private LocalDateTime dateRegistered;
+    @Column(name = "date_created", nullable = false)
+    private LocalDateTime dateCreated;
 
     @Audited
     @Column(name = "date_status_update")
     private LocalDateTime dateStatusUpdate;
 
+    @Column(name = "max_users")
+    private Integer maxUsers = 10;
+
+    @Column(name = "subscription_plan", length = 50)
+    private String subscriptionPlan = "basic";
+
     @NotAudited
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-        name = "account_extended_attributes",
+        name = "tenant_extended_attributes",
         schema = "hr_app",
         joinColumns = {
             @JoinColumn(name = "id"), 
@@ -55,8 +66,8 @@ public class Account {
     private Set<ExtendedAttribute> attributes;
 
     // Constructor
-    public Account() {
-        this.dateRegistered = LocalDateTime.now();
+    public Tenant() {
+        this.dateCreated = LocalDateTime.now();
     }
 
     // Attributes management
@@ -91,52 +102,50 @@ public class Account {
         setAttribute(ExtendedAttribute.of(key, value));
     }
 
-    // Email validation
-    public void setEmail(String email) {
-        String regexPattern = "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@"
-                + "[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
-        if (patternMatches(email, regexPattern)) {
-            this.email = email;
-        } else {
-            throw new IllegalArgumentException("Invalid email: " + email);
-        }
-    }
-
     // Status checks
-    public boolean isFree() {
-        return STATUS_FREE == this.status;
+    public boolean isActive() {
+        return STATUS_ACTIVE.equals(this.status);
     }
 
-    public boolean isPay() {
-        return STATUS_PAY == this.status;
+    public boolean isInactive() {
+        return STATUS_INACTIVE.equals(this.status);
     }
 
     public boolean isSuspended() {
-        return STATUS_SUSPENDED == this.status;
+        return STATUS_SUSPENDED.equals(this.status);
     }
 
-    public boolean isDeleted() {
-        return STATUS_DELETED == this.status;
+    public boolean isPending() {
+        return STATUS_PENDING.equals(this.status);
     }
 
     // Utility methods
-    public static boolean patternMatches(String string, String regexPattern) {
-        return Pattern.compile(regexPattern)
-                .matcher(string)
-                .matches();
+    public void activate() {
+        this.status = STATUS_ACTIVE;
+        this.dateStatusUpdate = LocalDateTime.now();
+    }
+
+    public void suspend() {
+        this.status = STATUS_SUSPENDED;
+        this.dateStatusUpdate = LocalDateTime.now();
+    }
+
+    public void deactivate() {
+        this.status = STATUS_INACTIVE;
+        this.dateStatusUpdate = LocalDateTime.now();
     }
 
     @Override
     public String toString() {
-        return "ACCOUNT{" + objectID + "}";
+        return "TENANT{" + objectID + "}";
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Account)) return false;
-        Account account = (Account) o;
-        return objectID != null ? objectID.equals(account.objectID) : account.objectID == null;
+        if (!(o instanceof Tenant)) return false;
+        Tenant tenant = (Tenant) o;
+        return objectID != null ? objectID.equals(tenant.objectID) : tenant.objectID == null;
     }
 
     @Override

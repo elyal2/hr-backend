@@ -3,64 +3,64 @@ package com.humanrsc.services;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
+import org.hibernate.Session;
+import io.quarkus.logging.Log;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 
 @ApplicationScoped
 public class TenantContextService {
 
-    private static final Logger LOG = Logger.getLogger(TenantContextService.class);
+    
 
     @Inject
-    DataSource dataSource;
+    EntityManager entityManager;
 
     @ConfigProperty(name = "app.default-tenant", defaultValue = "default")
     String defaultTenant;
 
     /**
-     * Set tenant context for RLS
+     * Set tenant context for RLS en la misma conexión JPA/Transacción
      */
+    @Transactional
     public void setTenantContext(String tenantId) {
         if (tenantId == null || tenantId.trim().isEmpty()) {
             tenantId = defaultTenant;
         }
 
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(
-                "SELECT set_config('app.current_tenant', ?, false)")) {
-            
-            stmt.setString(1, tenantId);
-            stmt.execute();
-
-            LOG.debugf("Tenant context set: %s", tenantId);
-
-        } catch (SQLException e) {
-            LOG.errorf(e, "Error setting tenant context: %s", tenantId);
+        try {
+            Session session = entityManager.unwrap(Session.class);
+            String finalTenant = tenantId;
+            session.doWork(connection -> {
+                try (PreparedStatement stmt = connection.prepareStatement(
+                    "SELECT set_config('app.current_tenant', ?, false)")) {
+                    stmt.setString(1, finalTenant);
+                    stmt.execute();
+                }
+            });
+            // LOG.debugf("Tenant context set (JPA): %s", tenantId);
+        } catch (Exception e) {
+            Log.errorf(e, "Error setting tenant context: %s", tenantId);
             throw new RuntimeException("Failed to set tenant context", e);
         }
     }
 
     /**
-     * Get current tenant from DB context
+     * Get current tenant from DB context usando la misma conexión JPA
      */
+    @Transactional
     public String getCurrentTenant() {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(
-                "SELECT current_setting('app.current_tenant', true)")) {
-            
-            var rs = stmt.executeQuery();
-            if (rs.next()) {
-                String tenant = rs.getString(1);
-                return (tenant == null || tenant.isEmpty()) ? defaultTenant : tenant;
-            }
-            return defaultTenant;
-
-        } catch (SQLException e) {
-            LOG.warnf(e, "Error getting current tenant, using default: %s", defaultTenant);
+        try {
+            Object result = entityManager.createNativeQuery(
+                "SELECT current_setting('app.current_tenant', true)")
+                .getSingleResult();
+            String tenant = result != null ? result.toString() : null;
+            return (tenant == null || tenant.isEmpty()) ? defaultTenant : tenant;
+        } catch (Exception e) {
+            Log.warnf(e, "Error getting current tenant, using default: %s", defaultTenant);
             return defaultTenant;
         }
     }

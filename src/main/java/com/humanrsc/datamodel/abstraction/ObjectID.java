@@ -15,11 +15,33 @@ import java.util.Objects;
 @AllArgsConstructor
 public class ObjectID implements Serializable {
 
-    @Column(name = "id")
+    @Column(name = "id", length = 100)
     private String id;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", length = 100)
     private String tenantID;
+
+    // Explicit constructor to avoid Lombok processing issues
+    public ObjectID(String id, String tenantID, boolean dummy) {
+        this.id = id;
+        this.tenantID = tenantID;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTenantID() {
+        return tenantID;
+    }
+
+    public void setTenantID(String tenantID) {
+        this.tenantID = tenantID;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -41,6 +63,9 @@ public class ObjectID implements Serializable {
     }
 
     public static ObjectID of(String id, String tenantID) {
-        return new ObjectID(id, tenantID);
+        ObjectID oid = new ObjectID();
+        oid.setId(id);
+        oid.setTenantID(tenantID);
+        return oid;
     }
 }

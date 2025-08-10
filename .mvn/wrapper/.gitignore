@@ -2,3 +2,6 @@ maven-wrapper.jar
 .env
 .env.local
 .env.*.local
+target/
+*.class
+.DS_Store
