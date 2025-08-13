@@ -43,7 +43,8 @@ public class OrganizationService {
             throw new IllegalArgumentException("Category name " + category.getName() + " already exists");
         }
         
-        return positionCategoryRepository.createPositionCategory(category, category.getObjectID().getTenantID());
+        positionCategoryRepository.persist(category);
+        return category;
     }
 
     public Optional<PositionCategory> findCategoryById(String id) {
@@ -68,7 +69,7 @@ public class OrganizationService {
             }
         }
         
-        return positionCategoryRepository.updatePositionCategory(category);
+        return positionCategoryRepository.getEntityManager().merge(category);
     }
 
     @Transactional
@@ -98,7 +99,8 @@ public class OrganizationService {
             unit.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        return organizationalUnitRepository.createOrganizationalUnit(unit, unit.getObjectID().getTenantID());
+        organizationalUnitRepository.persist(unit);
+        return unit;
     }
 
     public Optional<OrganizationalUnit> findUnitById(String id) {
@@ -123,7 +125,7 @@ public class OrganizationService {
 
     @Transactional
     public OrganizationalUnit updateOrganizationalUnit(OrganizationalUnit unit) {
-        return organizationalUnitRepository.updateOrganizationalUnit(unit);
+        return organizationalUnitRepository.getEntityManager().merge(unit);
     }
 
     @Transactional
@@ -157,7 +159,8 @@ public class OrganizationService {
             position.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        return jobPositionRepository.createJobPosition(position, position.getObjectID().getTenantID());
+        jobPositionRepository.persist(position);
+        return position;
     }
 
     public Optional<JobPosition> findPositionById(String id) {
@@ -190,7 +193,8 @@ public class OrganizationService {
 
     @Transactional
     public JobPosition updateJobPosition(JobPosition position) {
-        return jobPositionRepository.updateJobPosition(position);
+        position.updateTimestamp();
+        return jobPositionRepository.getEntityManager().merge(position);
     }
 
     @Transactional
@@ -228,7 +232,8 @@ public class OrganizationService {
             throw new IllegalArgumentException("Email " + employee.getEmail() + " already exists");
         }
         
-        return employeeRepository.createEmployee(employee, employee.getObjectID().getTenantID());
+        employeeRepository.persist(employee);
+        return employee;
     }
 
     public Optional<Employee> findEmployeeById(String id) {
@@ -261,7 +266,8 @@ public class OrganizationService {
 
     @Transactional
     public Employee updateEmployee(Employee employee) {
-        return employeeRepository.updateEmployee(employee);
+        employee.updateTimestamp();
+        return employeeRepository.getEntityManager().merge(employee);
     }
 
     @Transactional
@@ -292,7 +298,8 @@ public class OrganizationService {
             assignment.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        return employeeAssignmentRepository.createEmployeeAssignment(assignment, assignment.getObjectID().getTenantID());
+        employeeAssignmentRepository.persist(assignment);
+        return assignment;
     }
 
     public List<EmployeeAssignment> findEmployeeAssignments(String employeeId) {
@@ -305,7 +312,7 @@ public class OrganizationService {
 
     @Transactional
     public EmployeeAssignment updateEmployeeAssignment(EmployeeAssignment assignment) {
-        return employeeAssignmentRepository.updateEmployeeAssignment(assignment);
+        return employeeAssignmentRepository.getEntityManager().merge(assignment);
     }
 
     // ========== TEMPORARY REPLACEMENTS ==========
@@ -318,7 +325,8 @@ public class OrganizationService {
             replacement.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        return temporaryReplacementRepository.createTemporaryReplacement(replacement, replacement.getObjectID().getTenantID());
+        temporaryReplacementRepository.persist(replacement);
+        return replacement;
     }
 
     public List<TemporaryReplacement> findTemporaryReplacementsByEmployee(String employeeId) {
@@ -335,7 +343,8 @@ public class OrganizationService {
 
     @Transactional
     public TemporaryReplacement updateTemporaryReplacement(TemporaryReplacement replacement) {
-        return temporaryReplacementRepository.updateTemporaryReplacement(replacement);
+        replacement.updateTimestamp();
+        return temporaryReplacementRepository.getEntityManager().merge(replacement);
     }
 
     @Transactional
@@ -343,7 +352,8 @@ public class OrganizationService {
         Optional<TemporaryReplacement> replacement = temporaryReplacementRepository.findById(id);
         if (replacement.isPresent()) {
             replacement.get().complete();
-            temporaryReplacementRepository.updateTemporaryReplacement(replacement.get());
+            replacement.get().updateTimestamp();
+            temporaryReplacementRepository.getEntityManager().merge(replacement.get());
             return true;
         }
         return false;
@@ -354,7 +364,8 @@ public class OrganizationService {
         Optional<TemporaryReplacement> replacement = temporaryReplacementRepository.findById(id);
         if (replacement.isPresent()) {
             replacement.get().cancel();
-            temporaryReplacementRepository.updateTemporaryReplacement(replacement.get());
+            replacement.get().updateTimestamp();
+            temporaryReplacementRepository.getEntityManager().merge(replacement.get());
             return true;
         }
         return false;
@@ -370,7 +381,8 @@ public class OrganizationService {
             salaryHistory.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        return salaryHistoryRepository.createSalaryHistory(salaryHistory, salaryHistory.getObjectID().getTenantID());
+        salaryHistoryRepository.persist(salaryHistory);
+        return salaryHistory;
     }
 
     public List<SalaryHistory> findSalaryHistoryByEmployee(String employeeId) {
@@ -391,7 +403,7 @@ public class OrganizationService {
 
     @Transactional
     public SalaryHistory updateSalaryHistory(SalaryHistory salaryHistory) {
-        return salaryHistoryRepository.updateSalaryHistory(salaryHistory);
+        return salaryHistoryRepository.getEntityManager().merge(salaryHistory);
     }
 
     // ========== BUSINESS LOGIC METHODS ==========
@@ -420,7 +432,8 @@ public class OrganizationService {
             
             // Update employee salary
             emp.setCurrentSalary(newSalary);
-            employeeRepository.updateEmployee(emp);
+            emp.updateTimestamp();
+            employeeRepository.getEntityManager().merge(emp);
         }
     }
 
@@ -490,15 +503,29 @@ public class OrganizationService {
 
     // ========== ORGANIZATION CHART ==========
 
-    public SimpleOrganizationChart getOrganizationChart() {
+        public SimpleOrganizationChart getOrganizationChart() {
         List<PositionCategory> categories = positionCategoryRepository.findAllActive();
         List<Object[]> unitsData = organizationalUnitRepository.getUnitsWithCounts();
-        
+
         List<UnitWithCounts> units = unitsData.stream()
                 .map(this::mapToUnitWithCounts)
                 .toList();
-        
+
         return new SimpleOrganizationChart(units, categories);
+    }
+
+    // ========== ORGANIZATIONAL LEVELS ==========
+
+    public List<OrganizationalUnit> findUnitsByOrganizationalLevel(Integer level) {
+        return organizationalUnitRepository.findByOrganizationalLevel(level);
+    }
+
+    public List<OrganizationalUnit> findUnitsByOrganizationalLevelRange(Integer minLevel, Integer maxLevel) {
+        return organizationalUnitRepository.findByOrganizationalLevelRange(minLevel, maxLevel);
+    }
+
+    public long countUnitsByOrganizationalLevel(Integer level) {
+        return organizationalUnitRepository.countByOrganizationalLevel(level);
     }
 
     private UnitWithCounts mapToUnitWithCounts(Object[] row) {
@@ -510,16 +537,17 @@ public class OrganizationService {
         String country = (String) row[6];
         String status = (String) row[7];
         String parentUnitId = (String) row[10];
-        Long employeeCount = (Long) row[11];
-        Long positionCount = (Long) row[12];
-        Integer minLevel = (Integer) row[13];
-        Integer maxLevel = (Integer) row[14];
+        Integer organizationalLevel = (Integer) row[11];
+        Long employeeCount = (Long) row[12];
+        Long positionCount = (Long) row[13];
+        Integer minLevel = (Integer) row[14];
+        Integer maxLevel = (Integer) row[15];
         
         return new UnitWithCounts(
             id, name, description, costCenter, location, country, status, parentUnitId,
             employeeCount != null ? employeeCount : 0L,
             positionCount != null ? positionCount : 0L,
-            minLevel, maxLevel
+            minLevel, maxLevel, organizationalLevel
         );
     }
 
@@ -614,11 +642,13 @@ public class OrganizationService {
         private final Integer minHierarchicalLevel;
         private final Integer maxHierarchicalLevel;
         private final boolean hasPositions;
+        private final Integer organizationalLevel;
 
         public UnitWithCounts(String id, String name, String description, String costCenter,
                             String location, String country, String status, String parentUnitId,
                             long employeeCount, long positionCount, 
-                            Integer minHierarchicalLevel, Integer maxHierarchicalLevel) {
+                            Integer minHierarchicalLevel, Integer maxHierarchicalLevel,
+                            Integer organizationalLevel) {
             this.id = id;
             this.name = name;
             this.description = description;
@@ -632,6 +662,7 @@ public class OrganizationService {
             this.minHierarchicalLevel = minHierarchicalLevel;
             this.maxHierarchicalLevel = maxHierarchicalLevel;
             this.hasPositions = positionCount > 0;
+            this.organizationalLevel = organizationalLevel;
         }
 
         // Getters
@@ -648,6 +679,7 @@ public class OrganizationService {
         public Integer getMinHierarchicalLevel() { return minHierarchicalLevel; }
         public Integer getMaxHierarchicalLevel() { return maxHierarchicalLevel; }
         public boolean isHasPositions() { return hasPositions; }
+        public Integer getOrganizationalLevel() { return organizationalLevel; }
     }
 
     public static class SimpleOrganizationChart {

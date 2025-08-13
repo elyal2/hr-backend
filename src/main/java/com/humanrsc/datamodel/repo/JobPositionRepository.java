@@ -2,7 +2,7 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.JobPosition;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -10,14 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class JobPositionRepository implements PanacheRepository<JobPosition> {
+public class JobPositionRepository implements PanacheRepositoryBase<JobPosition, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public JobPosition createJobPosition(JobPosition position, String tenantID) {
-        persist(position);
-        return position;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<JobPosition> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -33,11 +28,7 @@ public class JobPositionRepository implements PanacheRepository<JobPosition> {
         return find("objectID.tenantID = ?1 and jobCode = ?2", tenantID, jobCode).firstResultOptional();
     }
 
-    @Transactional
-    public JobPosition updateJobPosition(JobPosition position) {
-        position.updateTimestamp();
-        return getEntityManager().merge(position);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     @Transactional
     public boolean activateJobPosition(ObjectID objectID) {

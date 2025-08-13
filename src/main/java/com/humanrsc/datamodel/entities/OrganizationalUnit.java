@@ -43,6 +43,10 @@ public class OrganizationalUnit {
     })
     private OrganizationalUnit parentUnit;
 
+    @NotNull
+    @Column(name = "organizational_level", nullable = false)
+    private Integer organizationalLevel = 1;
+
 
 
     @Column(name = "cost_center")

@@ -95,26 +95,7 @@ public class TenantRepository implements PanacheRepositoryBase<Tenant, ObjectID>
         return count("status = ?1", status);
     }
 
-    /**
-     * Crea un nuevo tenant con ObjectID generado
-     */
-    @Transactional
-    public Tenant createTenant(Tenant tenant, String tenantID) {
-        if (tenant.getObjectID() == null) {
-            tenant.setObjectID(ObjectID.of(java.util.UUID.randomUUID().toString(), tenantID));
-        }
-        
-        persist(tenant);
-        return tenant;
-    }
-
-    /**
-     * Actualiza un tenant existente
-     */
-    @Transactional
-    public Tenant updateTenant(Tenant tenant) {
-        return getEntityManager().merge(tenant);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     /**
      * Activa un tenant
@@ -125,7 +106,7 @@ public class TenantRepository implements PanacheRepositoryBase<Tenant, ObjectID>
         if (tenantOpt.isPresent()) {
             Tenant tenant = tenantOpt.get();
             tenant.activate();
-            updateTenant(tenant);
+            getEntityManager().merge(tenant);
             return true;
         }
         return false;
@@ -140,7 +121,7 @@ public class TenantRepository implements PanacheRepositoryBase<Tenant, ObjectID>
         if (tenantOpt.isPresent()) {
             Tenant tenant = tenantOpt.get();
             tenant.suspend();
-            updateTenant(tenant);
+            getEntityManager().merge(tenant);
             return true;
         }
         return false;
@@ -155,7 +136,7 @@ public class TenantRepository implements PanacheRepositoryBase<Tenant, ObjectID>
         if (tenantOpt.isPresent()) {
             Tenant tenant = tenantOpt.get();
             tenant.deactivate();
-            updateTenant(tenant);
+            getEntityManager().merge(tenant);
             return true;
         }
         return false;

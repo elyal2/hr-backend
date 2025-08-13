@@ -2,23 +2,16 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.EmployeeAssignment;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class EmployeeAssignmentRepository implements PanacheRepository<EmployeeAssignment> {
+public class EmployeeAssignmentRepository implements PanacheRepositoryBase<EmployeeAssignment, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public EmployeeAssignment createEmployeeAssignment(EmployeeAssignment assignment, String tenantID) {
-        persist(assignment);
-        return assignment;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<EmployeeAssignment> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -29,10 +22,7 @@ public class EmployeeAssignmentRepository implements PanacheRepository<EmployeeA
         return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
     }
 
-    @Transactional
-    public EmployeeAssignment updateEmployeeAssignment(EmployeeAssignment assignment) {
-        return getEntityManager().merge(assignment);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     // Query methods for large datasets
     public List<EmployeeAssignment> findByEmployee(String employeeId) {

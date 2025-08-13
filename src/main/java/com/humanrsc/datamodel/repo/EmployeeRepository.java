@@ -2,7 +2,7 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.Employee;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -11,14 +11,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class EmployeeRepository implements PanacheRepository<Employee> {
+public class EmployeeRepository implements PanacheRepositoryBase<Employee, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public Employee createEmployee(Employee employee, String tenantID) {
-        persist(employee);
-        return employee;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<Employee> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -39,11 +34,7 @@ public class EmployeeRepository implements PanacheRepository<Employee> {
         return find("objectID.tenantID = ?1 and email = ?2", tenantID, email).firstResultOptional();
     }
 
-    @Transactional
-    public Employee updateEmployee(Employee employee) {
-        employee.updateTimestamp();
-        return getEntityManager().merge(employee);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     @Transactional
     public boolean activateEmployee(ObjectID objectID) {

@@ -10,7 +10,7 @@ import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
+
 
 @ApplicationScoped
 public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
@@ -78,26 +78,7 @@ public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
         return count("objectID.tenantID", tenantID);
     }
 
-    /**
-     * Crea un nuevo usuario con ObjectID generado
-     */
-    @Transactional
-    public User createUser(User user, String tenantID) {
-        if (user.getObjectID() == null) {
-            String userId = UUID.randomUUID().toString();
-            user.setObjectID(ObjectID.of(userId, tenantID));
-        }
-        persist(user);
-        return user;
-    }
-
-    /**
-     * Actualiza un usuario existente
-     */
-    @Transactional
-    public User updateUser(User user) {
-        return getEntityManager().merge(user);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     /**
      * Elimina un usuario (marca como eliminado)
@@ -108,7 +89,7 @@ public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.markAsDeleted();
-            updateUser(user);
+            getEntityManager().merge(user);
             return true;
         }
         return false;
@@ -123,7 +104,7 @@ public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.activate();
-            updateUser(user);
+            getEntityManager().merge(user);
             return true;
         }
         return false;
@@ -138,7 +119,7 @@ public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.suspend();
-            updateUser(user);
+            getEntityManager().merge(user);
             return true;
         }
         return false;
@@ -153,7 +134,7 @@ public class UserRepository implements PanacheRepositoryBase<User, ObjectID> {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.updateLastLogin();
-            updateUser(user);
+            getEntityManager().merge(user);
             return true;
         }
         return false;

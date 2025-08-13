@@ -2,6 +2,8 @@ package com.humanrsc.resources;
 
 import com.humanrsc.datamodel.entities.*;
 import com.humanrsc.datamodel.entities.PositionCategory;
+import com.humanrsc.datamodel.abstraction.ObjectID;
+import com.humanrsc.config.ThreadLocalStorage;
 import com.humanrsc.security.JWTSecured;
 import com.humanrsc.config.ConnectionPoolIntercepted;
 import com.humanrsc.config.ConfigDefaults;
@@ -154,7 +156,13 @@ public class OrganizationResource {
     @RolesAllowed({WRITE_ORG_UNITS})
     public Response updateOrganizationalUnit(@PathParam("id") String id, OrganizationalUnit unit) {
         try {
-            unit.getObjectID().setId(id);
+            // Crear ObjectID si no existe
+            if (unit.getObjectID() == null) {
+                String tenantID = ThreadLocalStorage.getTenantID();
+                unit.setObjectID(ObjectID.of(id, tenantID));
+            } else {
+                unit.getObjectID().setId(id);
+            }
             OrganizationalUnit updated = organizationService.updateOrganizationalUnit(unit);
             return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
@@ -656,7 +664,49 @@ public class OrganizationResource {
         return Response.ok(vacantPositions).build();
     }
 
+    // ========== ORGANIZATIONAL LEVELS ENDPOINTS ==========
+
+    @GET
+    @Path("/units/level/{level}")
+    @RolesAllowed({READ_ORG_UNITS})
+    public Response getUnitsByOrganizationalLevel(@PathParam("level") Integer level) {
+        List<OrganizationalUnit> units = organizationService.findUnitsByOrganizationalLevel(level);
+        return Response.ok(units).build();
+    }
+
+    @GET
+    @Path("/units/level-range")
+    @RolesAllowed({READ_ORG_UNITS})
+    public Response getUnitsByOrganizationalLevelRange(@QueryParam("min") Integer minLevel, 
+                                                      @QueryParam("max") Integer maxLevel) {
+        if (minLevel == null || maxLevel == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Missing parameters", "Both min and max level parameters are required"))
+                    .build();
+        }
+        List<OrganizationalUnit> units = organizationService.findUnitsByOrganizationalLevelRange(minLevel, maxLevel);
+        return Response.ok(units).build();
+    }
+
+    @GET
+    @Path("/units/level/{level}/count")
+    @RolesAllowed({READ_ORG_UNITS})
+    public Response getUnitCountByOrganizationalLevel(@PathParam("level") Integer level) {
+        long count = organizationService.countUnitsByOrganizationalLevel(level);
+        return Response.ok(new CountResponse(count)).build();
+    }
+
     // ========== INNER CLASSES ==========
+
+    public static class CountResponse {
+        private final long count;
+
+        public CountResponse(long count) {
+            this.count = count;
+        }
+
+        public long getCount() { return count; }
+    }
 
     public static class ErrorResponse {
         private final String error;

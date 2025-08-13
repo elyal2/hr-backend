@@ -2,7 +2,7 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.PositionCategory;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -10,14 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class PositionCategoryRepository implements PanacheRepository<PositionCategory> {
+public class PositionCategoryRepository implements PanacheRepositoryBase<PositionCategory, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public PositionCategory createPositionCategory(PositionCategory category, String tenantID) {
-        persist(category);
-        return category;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<PositionCategory> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -28,10 +23,7 @@ public class PositionCategoryRepository implements PanacheRepository<PositionCat
         return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
     }
 
-    @Transactional
-    public PositionCategory updatePositionCategory(PositionCategory category) {
-        return getEntityManager().merge(category);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     // Query methods for large datasets
     public List<PositionCategory> findAllActive() {

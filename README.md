@@ -17,15 +17,16 @@ A comprehensive Human Resources management system built with Quarkus and Panache
 ## Data Model
 
 ### Organizational Structure
-- **Organizational Units**: Hierarchical structure representing company departments
+- **Organizational Units**: Hierarchical structure representing company departments with organizational levels
 - **Job Positions**: Roles within units with numerical hierarchical levels (1 = CEO, 2 = Directors, etc.)
 - **Position Categories**: Labels for grouping positions (e.g., "Directors", "Managers", "Administrative")
 - **Employees**: Assigned to units and occupying positions
 
 ### Key Concepts
-- **Hierarchical Levels**: Numerical values assigned to positions (1, 2, 3, etc.)
+- **Organizational Levels**: Numerical values assigned to units (1 = Top level, 2 = Departments, 3 = Sub-departments, etc.)
+- **Hierarchical Levels**: Numerical values assigned to positions (1 = CEO, 2 = Directors, 3 = Managers, etc.)
 - **Position Categories**: Text labels for grouping similar positions
-- **Organizational Units**: Company structure with parent-child relationships
+- **Organizational Units**: Company structure with parent-child relationships and organizational levels
 
 ## API Endpoints
 
@@ -64,6 +65,14 @@ GET /api/organization/positions/level/{level}
 GET /api/organization/positions/level-range?min=X&max=Y
 ```
 
+### Organizational Units by Level
+
+```
+GET /api/organization/units/level/{level}
+GET /api/organization/units/level-range?min=X&max=Y
+GET /api/organization/units/level/{level}/count
+```
+
 ### Example Response Structure
 
 ```json
@@ -77,7 +86,10 @@ GET /api/organization/positions/level-range?min=X&max=Y
       "parentUnitId": null,
       "employeeCount": 5,
       "positionCount": 3,
-      "hasLevels": true
+      "minHierarchicalLevel": 1,
+      "maxHierarchicalLevel": 3,
+      "hasPositions": true,
+      "organizationalLevel": 1
     },
     {
       "id": "unit-2", 
@@ -87,7 +99,10 @@ GET /api/organization/positions/level-range?min=X&max=Y
       "parentUnitId": "unit-1",
       "employeeCount": 2,
       "positionCount": 1,
-      "hasLevels": true
+      "minHierarchicalLevel": 2,
+      "maxHierarchicalLevel": 2,
+      "hasPositions": true,
+      "organizationalLevel": 2
     }
   ],
   "categories": [
@@ -113,7 +128,7 @@ GET /api/organization/positions/level-range?min=X&max=Y
 
 ## Database Migrations
 
-The application uses Flyway for database migrations. The latest migration (V1.4.0) includes:
+The application uses Flyway for database migrations. The latest migrations include:
 
 ### V1.4.0 - Reorganize Position Structure
 - **New**: `position_categories` table for grouping positions
@@ -121,10 +136,16 @@ The application uses Flyway for database migrations. The latest migration (V1.4.
 - **Removed**: `organizational_levels` table and related columns
 - **Updated**: Foreign key relationships and indices
 
+### V1.5.0 - Add Organizational Levels
+- **New**: `organizational_level` column in `organizational_units` table
+- **New**: Indexes for efficient level-based queries
+- **Updated**: Organization chart to include organizational levels
+
 ### Key Changes
-- Job positions now have numerical hierarchical levels (1, 2, 3, etc.)
+- Job positions have numerical hierarchical levels (1, 2, 3, etc.)
+- Organizational units have organizational levels (1 = Top level, 2 = Departments, etc.)
 - Position categories provide text labels for grouping positions
-- Organizational units no longer have direct level associations
+- Two separate hierarchies: organizational (units) and hierarchical (positions)
 - Improved data model alignment with business concepts
 
 Initial schema is created automatically on startup.

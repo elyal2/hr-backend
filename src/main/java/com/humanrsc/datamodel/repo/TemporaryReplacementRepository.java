@@ -2,23 +2,16 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.TemporaryReplacement;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class TemporaryReplacementRepository implements PanacheRepository<TemporaryReplacement> {
+public class TemporaryReplacementRepository implements PanacheRepositoryBase<TemporaryReplacement, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public TemporaryReplacement createTemporaryReplacement(TemporaryReplacement replacement, String tenantID) {
-        persist(replacement);
-        return replacement;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<TemporaryReplacement> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -29,11 +22,7 @@ public class TemporaryReplacementRepository implements PanacheRepository<Tempora
         return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
     }
 
-    @Transactional
-    public TemporaryReplacement updateTemporaryReplacement(TemporaryReplacement replacement) {
-        replacement.updateTimestamp();
-        return getEntityManager().merge(replacement);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     // Query methods
     public List<TemporaryReplacement> findByOriginalEmployee(String employeeId) {

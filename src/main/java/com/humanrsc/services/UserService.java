@@ -58,7 +58,7 @@ public class UserService {
         if (existingUser.isPresent()) {
             User user = existingUser.get();
             updateUserFromJWT(user, email);
-            return userRepository.updateUser(user);
+            return userRepository.getEntityManager().merge(user);
         }
 
         if (subject != null && !subject.isBlank()) {
@@ -70,12 +70,13 @@ public class UserService {
                 user.setEmail(email);
                 updateUserFromJWT(user, email);
                 user.setDateStatusUpdate(LocalDateTime.now());
-                return userRepository.updateUser(user);
+                return userRepository.getEntityManager().merge(user);
             }
         }
 
         User newUser = createUserFromJWT(email, subject, tenantID);
-        return userRepository.createUser(newUser, tenantID);
+        userRepository.persist(newUser);
+        return newUser;
     }
 
     private User createUserFromJWT(String email, String subject, String tenantID) {
@@ -176,7 +177,7 @@ public class UserService {
             Tenant t = existing.get();
             if (t.getDomain() == null && domain != null) {
                 t.setDomain(domain);
-                tenantRepository.updateTenant(t);
+                tenantRepository.getEntityManager().merge(t);
             }
             return;
         }
@@ -194,7 +195,7 @@ public class UserService {
         tenant.setStatus(Tenant.STATUS_PENDING);
         // Use UUID for id and stable tenant_id
         tenant.setObjectID(ObjectID.of(UUID.randomUUID().toString(), tenantID));
-        tenantRepository.createTenant(tenant, tenantID);
+        tenantRepository.persist(tenant);
     }
 
     private static String lower(String s) { return s == null ? null : s.toLowerCase(); }
@@ -221,9 +222,10 @@ public class UserService {
         String tenantID = ThreadLocalStorage.getTenantID();
         if (tenantID == null) tenantID = jwtTokenUtils.extractTenantFromJWT();
         user.setEmail(lower(user.getEmail()));
-        return userRepository.createUser(user, tenantID);
+        userRepository.persist(user);
+        return user;
     }
-    @Transactional public User updateUser(User user) { return userRepository.updateUser(user); }
+    @Transactional public User updateUser(User user) { return userRepository.getEntityManager().merge(user); }
     @Transactional public boolean deleteUser(ObjectID objectID) { return userRepository.deleteUser(objectID); }
     @Transactional public boolean activateUser(ObjectID objectID) { return userRepository.activateUser(objectID); }
     @Transactional public boolean suspendUser(ObjectID objectID) { return userRepository.suspendUser(objectID); }

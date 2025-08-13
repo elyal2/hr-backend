@@ -34,7 +34,8 @@ public class TenantService {
         if (tenant.getDomain() != null && tenantRepository.existsByDomain(tenant.getDomain())) {
             throw new IllegalArgumentException("Domain already exists: " + tenant.getDomain());
         }
-        return tenantRepository.createTenant(tenant, tenant.getObjectID().getTenantID());
+        tenantRepository.persist(tenant);
+        return tenant;
     }
 
     public Optional<Tenant> findById(ObjectID objectID) { return tenantRepository.findByObjectID(objectID); }
@@ -68,7 +69,7 @@ public class TenantService {
                 throw new IllegalArgumentException("Domain already exists: " + tenant.getDomain());
             }
         }
-        return tenantRepository.updateTenant(tenant);
+        return tenantRepository.getEntityManager().merge(tenant);
     }
 
     @Transactional public boolean activateTenant(ObjectID objectID) { return tenantRepository.activateTenant(objectID); }

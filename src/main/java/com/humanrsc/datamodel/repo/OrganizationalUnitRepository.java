@@ -2,7 +2,7 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.OrganizationalUnit;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -10,14 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class OrganizationalUnitRepository implements PanacheRepository<OrganizationalUnit> {
+public class OrganizationalUnitRepository implements PanacheRepositoryBase<OrganizationalUnit, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public OrganizationalUnit createOrganizationalUnit(OrganizationalUnit unit, String tenantID) {
-        persist(unit);
-        return unit;
-    }
+    // Basic CRUD operations - usar métodos estándar de Panache
 
     public Optional<OrganizationalUnit> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -28,10 +23,7 @@ public class OrganizationalUnitRepository implements PanacheRepository<Organizat
         return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
     }
 
-    @Transactional
-    public OrganizationalUnit updateOrganizationalUnit(OrganizationalUnit unit) {
-        return getEntityManager().merge(unit);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     // Query methods for large datasets
     public List<OrganizationalUnit> findAllActive() {
@@ -86,7 +78,7 @@ public class OrganizationalUnitRepository implements PanacheRepository<Organizat
             SELECT 
                 ou.id, ou.tenant_id, ou.name, ou.description, ou.cost_center, 
                 ou.location, ou.country, ou.status, ou.date_created, ou.date_updated,
-                ou.parent_unit_id,
+                ou.parent_unit_id, ou.organizational_level,
                 COUNT(DISTINCT ea.id) as employee_count,
                 COUNT(DISTINCT ea.position_id) as position_count,
                 MIN(jp.hierarchical_level) as min_level,
@@ -100,8 +92,8 @@ public class OrganizationalUnitRepository implements PanacheRepository<Organizat
             WHERE ou.tenant_id = ?1 AND ou.status = 'active'
             GROUP BY ou.id, ou.tenant_id, ou.name, ou.description, ou.cost_center, 
                      ou.location, ou.country, ou.status, ou.date_created, ou.date_updated,
-                     ou.parent_unit_id
-            ORDER BY ou.name
+                     ou.parent_unit_id, ou.organizational_level
+            ORDER BY ou.organizational_level, ou.name
             """;
         
         @SuppressWarnings("unchecked")
@@ -113,5 +105,32 @@ public class OrganizationalUnitRepository implements PanacheRepository<Organizat
 
     private String getCurrentTenantID() {
         return com.humanrsc.config.ThreadLocalStorage.getTenantID();
+    }
+
+    /**
+     * Busca unidades por nivel organizacional
+     */
+    public List<OrganizationalUnit> findByOrganizationalLevel(Integer level) {
+        String tenantID = getCurrentTenantID();
+        return find("objectID.tenantID = ?1 and status = ?2 and organizationalLevel = ?3 order by name", 
+                   tenantID, OrganizationalUnit.STATUS_ACTIVE, level).list();
+    }
+
+    /**
+     * Busca unidades por rango de niveles organizacionales
+     */
+    public List<OrganizationalUnit> findByOrganizationalLevelRange(Integer minLevel, Integer maxLevel) {
+        String tenantID = getCurrentTenantID();
+        return find("objectID.tenantID = ?1 and status = ?2 and organizationalLevel between ?3 and ?4 order by organizationalLevel, name", 
+                   tenantID, OrganizationalUnit.STATUS_ACTIVE, minLevel, maxLevel).list();
+    }
+
+    /**
+     * Cuenta unidades por nivel organizacional
+     */
+    public long countByOrganizationalLevel(Integer level) {
+        String tenantID = getCurrentTenantID();
+        return count("objectID.tenantID = ?1 and status = ?2 and organizationalLevel = ?3", 
+                    tenantID, OrganizationalUnit.STATUS_ACTIVE, level);
     }
 }

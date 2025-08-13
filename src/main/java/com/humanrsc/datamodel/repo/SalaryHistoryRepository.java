@@ -2,24 +2,17 @@ package com.humanrsc.datamodel.repo;
 
 import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.SalaryHistory;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class SalaryHistoryRepository implements PanacheRepository<SalaryHistory> {
+public class SalaryHistoryRepository implements PanacheRepositoryBase<SalaryHistory, ObjectID> {
 
-    // Basic CRUD operations
-    @Transactional
-    public SalaryHistory createSalaryHistory(SalaryHistory salaryHistory, String tenantID) {
-        persist(salaryHistory);
-        return salaryHistory;
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     public Optional<SalaryHistory> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
@@ -30,10 +23,7 @@ public class SalaryHistoryRepository implements PanacheRepository<SalaryHistory>
         return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
     }
 
-    @Transactional
-    public SalaryHistory updateSalaryHistory(SalaryHistory salaryHistory) {
-        return getEntityManager().merge(salaryHistory);
-    }
+    // Usar métodos estándar de PanacheRepositoryBase
 
     // Query methods
     public List<SalaryHistory> findByEmployee(String employeeId) {
