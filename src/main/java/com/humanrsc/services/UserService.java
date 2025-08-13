@@ -180,6 +180,13 @@ public class UserService {
             }
             return;
         }
+        
+        // Verificar si ya existe un tenant con este tenant_id antes de crear
+        if (tenantRepository.existsByTenantId(tenantID)) {
+            Log.warnf("Tenant already exists but not found by findByTenantId: %s", tenantID);
+            return;
+        }
+        
         Log.infof("Creating new tenant: %s", tenantID);
         Tenant tenant = new Tenant();
         tenant.setName(tenantID.replace('-', ' '));

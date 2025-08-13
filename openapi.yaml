@@ -1,0 +1,2217 @@
+---
+openapi: 3.1.0
+paths:
+  /api/organization/assignments:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAssignment"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Employee Assignment
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:assignments
+  /api/organization/assignments/employee/{employeeId}:
+    get:
+      parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employee Assignments
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:assignments
+  /api/organization/assignments/employee/{employeeId}/current:
+    get:
+      parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Current Assignment
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:assignments
+  /api/organization/assignments/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAssignment"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Employee Assignment
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:assignments
+  /api/organization/chart:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Organization Chart
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+        - read:people
+  /api/organization/employees:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: type
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Employees
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Employee"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:people
+  /api/organization/employees/active:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Active Employees
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/employee-id/{employeeId}:
+    get:
+      parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employee By Employee Id
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/manager/{managerId}:
+    get:
+      parameters:
+      - name: managerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employees By Manager
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/position/{positionId}:
+    get:
+      parameters:
+      - name: positionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employees By Position
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/unit/{unitId}:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employees By Unit
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Employee"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:people
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employee By Id
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/{id}/resign:
+    post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: resignationDate
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Resign Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:people
+  /api/organization/employees/{id}/salary:
+    post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: approvedBy
+        in: query
+        schema:
+          type: string
+      - name: newSalary
+        in: query
+        schema:
+          type: string
+      - name: reason
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Update Employee Salary
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
+  /api/organization/employees/{id}/terminate:
+    post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: terminationDate
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Terminate Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:people
+  /api/organization/position-categories:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Categories
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-levels
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionCategory"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Position Category
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-levels
+  /api/organization/position-categories/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionCategory"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Position Category
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-levels
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Category By Id
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-levels
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Delete Position Category
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-levels
+  /api/organization/positions:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Positions
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobPosition"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Job Position
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:positions
+  /api/organization/positions/category/{categoryId}:
+    get:
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Positions By Category
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/level-range:
+    get:
+      parameters:
+      - name: max
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: min
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Positions By Level Range
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/level/{level}:
+    get:
+      parameters:
+      - name: level
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Positions By Hierarchical Level
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/unit/{unitId}:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Positions By Unit
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/vacant:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Vacant Positions
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobPosition"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Job Position
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:positions
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Position By Id
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Delete Job Position
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:positions
+  /api/organization/replacements:
+    get:
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Temporary Replacements
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:replacements
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemporaryReplacement"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Temporary Replacement
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:replacements
+  /api/organization/replacements/employee/{employeeId}:
+    get:
+      parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Temporary Replacements By Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:replacements
+  /api/organization/replacements/{id}/cancel:
+    post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Cancel Temporary Replacement
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:replacements
+  /api/organization/replacements/{id}/complete:
+    post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Complete Temporary Replacement
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:replacements
+  /api/organization/salary-history:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalaryHistory"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Salary History
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
+  /api/organization/salary-history/decreases:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Salary Decreases
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+  /api/organization/salary-history/employee/{employeeId}:
+    get:
+      parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Salary History By Employee
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+  /api/organization/salary-history/increases:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Salary Increases
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+  /api/organization/salary-history/recent:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Recent Salary Changes
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+  /api/organization/stats/employees:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Employee Stats
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - stats:read
+  /api/organization/stats/organization:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Organization Stats
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - stats:read
+  /api/organization/units:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Units
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationalUnit"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Organizational Unit
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-units
+  /api/organization/units/root:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Root Units
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /api/organization/units/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationalUnit"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Organizational Unit
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-units
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Unit By Id
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Delete Organizational Unit
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:org-units
+  /api/organization/units/{id}/children:
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Child Units
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /debug/me:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Me
+      tags:
+      - Debug Resource
+      security:
+      - SecurityScheme: []
+  /debug/token:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Token
+      tags:
+      - Debug Resource
+      security:
+      - SecurityScheme:
+        - audit:read
+  /tenants:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Tenants
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tenant"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+  /tenants/count/status/{status}:
+    get:
+      parameters:
+      - name: status
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenant Count By Status
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/current:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Current Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/current/active:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Is Current Tenant Active
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/current/can-create-users:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Can Create More Users
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+        - settings:manage
+  /tenants/domain/{domain}:
+    get:
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenant By Domain
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/plan/{plan}:
+    get:
+      parameters:
+      - name: plan
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenants By Subscription Plan
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/status/{status}:
+    get:
+      parameters:
+      - name: status
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenants By Status
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tenant"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - settings:manage
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenant By Id
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - read:users
+  /tenants/{id}/activate:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Activate Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+  /tenants/{id}/deactivate:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Deactivate Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+  /tenants/{id}/stats:
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Tenant Stats
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+        - stats:read
+  /tenants/{id}/suspend:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Suspend Tenant
+      tags:
+      - Tenant Resource
+      security:
+      - SecurityScheme:
+        - tenant:manage
+  /users:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Users
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create User
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - write:users
+  /users/count:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get User Count
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+  /users/email/{email}:
+    get:
+      parameters:
+      - name: email
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get User By Email
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+  /users/role/{role}:
+    get:
+      parameters:
+      - name: role
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Users By Role
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+  /users/status/{status}:
+    get:
+      parameters:
+      - name: status
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Users By Status
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+  /users/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update User
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - write:users
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get User By Id
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - read:users
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Delete User
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - write:users
+  /users/{id}/activate:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Activate User
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - write:users
+  /users/{id}/suspend:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Suspend User
+      tags:
+      - User Resource
+      security:
+      - SecurityScheme:
+        - write:users
+components:
+  schemas:
+    Employee:
+      type: object
+      required:
+      - objectID
+      - employeeId
+      - firstName
+      - lastName
+      - email
+      - employeeType
+      - hireDate
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        employeeId:
+          type: string
+          pattern: \S
+        firstName:
+          type: string
+          pattern: \S
+        lastName:
+          type: string
+          pattern: \S
+        email:
+          type: string
+          pattern: \S
+        dateOfBirth:
+          $ref: "#/components/schemas/LocalDate"
+        gender:
+          type: string
+        nationalId:
+          type: string
+        taxId:
+          type: string
+        employeeType:
+          type: string
+          pattern: \S
+        contractType:
+          type: string
+        hireDate:
+          $ref: "#/components/schemas/LocalDate"
+        terminationDate:
+          $ref: "#/components/schemas/LocalDate"
+        currentSalary:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        attribute:
+          $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        terminated:
+          type: boolean
+        resigned:
+          type: boolean
+        employed:
+          type: boolean
+        fullName:
+          type: string
+        contractor:
+          type: boolean
+        intern:
+          type: boolean
+        fullTime:
+          type: boolean
+        partTime:
+          type: boolean
+        age:
+          type: integer
+          format: int32
+        tenureInDays:
+          type: integer
+          format: int64
+        tenureInYears:
+          type: integer
+          format: int64
+    EmployeeAssignment:
+      type: object
+      required:
+      - objectID
+      - employee
+      - startDate
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        employee:
+          $ref: "#/components/schemas/Employee"
+        position:
+          $ref: "#/components/schemas/JobPosition"
+        unit:
+          $ref: "#/components/schemas/OrganizationalUnit"
+        manager:
+          $ref: "#/components/schemas/Employee"
+        startDate:
+          $ref: "#/components/schemas/LocalDate"
+        endDate:
+          $ref: "#/components/schemas/LocalDate"
+        salary:
+          type: number
+        currency:
+          type: string
+        movementReason:
+          type: string
+        notes:
+          type: string
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        active:
+          type: boolean
+        historical:
+          type: boolean
+        current:
+          type: boolean
+        durationInDays:
+          type: integer
+          format: int64
+        durationInMonths:
+          type: integer
+          format: int64
+        durationInYears:
+          type: integer
+          format: int64
+        promotion:
+          type: boolean
+        demotion:
+          type: boolean
+        lateralMove:
+          type: boolean
+        termination:
+          type: boolean
+        resignation:
+          type: boolean
+    ExtendedAttribute:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        type:
+          type: string
+    JobPosition:
+      type: object
+      required:
+      - objectID
+      - title
+      - hierarchicalLevel
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        title:
+          type: string
+          pattern: \S
+        description:
+          type: string
+        unit:
+          $ref: "#/components/schemas/OrganizationalUnit"
+        category:
+          $ref: "#/components/schemas/PositionCategory"
+        hierarchicalLevel:
+          type: integer
+          format: int32
+        jobCode:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        attribute:
+          $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        deleted:
+          type: boolean
+    LocalDate:
+      type: string
+      format: date
+      examples:
+      - 2022-03-10
+    LocalDateTime:
+      type: string
+      format: date-time
+      examples:
+      - 2022-03-10T12:15:50
+    ObjectID:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantID:
+          type: string
+    OrganizationalUnit:
+      type: object
+      required:
+      - objectID
+      - name
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        name:
+          type: string
+          pattern: \S
+        description:
+          type: string
+        parentUnit:
+          $ref: "#/components/schemas/OrganizationalUnit"
+        costCenter:
+          type: string
+        location:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        attribute:
+          $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        deleted:
+          type: boolean
+        root:
+          type: boolean
+    PositionCategory:
+      type: object
+      required:
+      - objectID
+      - name
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        name:
+          type: string
+          pattern: \S
+        description:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        deleted:
+          type: boolean
+    SalaryHistory:
+      type: object
+      required:
+      - objectID
+      - employee
+      - newSalary
+      - effectiveDate
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        employee:
+          $ref: "#/components/schemas/Employee"
+        oldSalary:
+          type: number
+        newSalary:
+          type: number
+        currency:
+          type: string
+        effectiveDate:
+          $ref: "#/components/schemas/LocalDate"
+        reason:
+          type: string
+        approvedBy:
+          $ref: "#/components/schemas/Employee"
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        salaryIncrease:
+          type: number
+        salaryIncreasePercentage:
+          type: number
+        increase:
+          type: boolean
+        decrease:
+          type: boolean
+        noChange:
+          type: boolean
+        recent:
+          type: boolean
+    TemporaryReplacement:
+      type: object
+      required:
+      - objectID
+      - originalEmployee
+      - replacementEmployee
+      - startDate
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        originalEmployee:
+          $ref: "#/components/schemas/Employee"
+        replacementEmployee:
+          $ref: "#/components/schemas/Employee"
+        position:
+          $ref: "#/components/schemas/JobPosition"
+        startDate:
+          $ref: "#/components/schemas/LocalDate"
+        endDate:
+          $ref: "#/components/schemas/LocalDate"
+        reason:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        active:
+          type: boolean
+        completed:
+          type: boolean
+        cancelled:
+          type: boolean
+        current:
+          type: boolean
+        expired:
+          type: boolean
+        durationInDays:
+          type: integer
+          format: int64
+    Tenant:
+      type: object
+      required:
+      - objectID
+      - name
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        name:
+          type: string
+          pattern: \S
+        domain:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateStatusUpdate:
+          $ref: "#/components/schemas/LocalDateTime"
+        maxUsers:
+          type: integer
+          format: int32
+        subscriptionPlan:
+          type: string
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        attribute:
+          $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        suspended:
+          type: boolean
+        pending:
+          type: boolean
+    User:
+      type: object
+      required:
+      - objectID
+      - email
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          pattern: \S
+        status:
+          type: string
+          pattern: \S
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateStatusUpdate:
+          $ref: "#/components/schemas/LocalDateTime"
+        lastLogin:
+          $ref: "#/components/schemas/LocalDateTime"
+        roles:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        attributes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExtendedAttribute"
+        attribute:
+          $ref: "#/components/schemas/ExtendedAttribute"
+        active:
+          type: boolean
+        inactive:
+          type: boolean
+        suspended:
+          type: boolean
+        pending:
+          type: boolean
+        deleted:
+          type: boolean
+        fullName:
+          type: string
+  securitySchemes:
+    SecurityScheme:
+      type: openIdConnect
+      openIdConnectUrl: https://humanrsc.eu.auth0.com/.well-known/openid-configuration
+      description: Authentication
+info:
+  title: hr-backend API
+  version: 1.0.0-SNAPSHOT

@@ -18,6 +18,15 @@ public final class Permissions {
     public static final String READ_ORG_UNITS = "read:org-units";
     public static final String WRITE_ORG_UNITS = "write:org-units";
 
+    public static final String READ_POSITION_CATEGORIES = "read:position-categories";
+    public static final String WRITE_POSITION_CATEGORIES = "write:position-categories";
+
+    public static final String READ_ASSIGNMENTS = "read:assignments";
+    public static final String WRITE_ASSIGNMENTS = "write:assignments";
+
+    public static final String READ_REPLACEMENTS = "read:replacements";
+    public static final String WRITE_REPLACEMENTS = "write:replacements";
+
     public static final String READ_USERS = "read:users";
     public static final String WRITE_USERS = "write:users";
 

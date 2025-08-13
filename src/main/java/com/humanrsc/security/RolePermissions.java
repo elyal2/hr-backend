@@ -67,6 +67,9 @@ public final class RolePermissions {
         allowed.add(WRITE_PEOPLE);
         allowed.add(WRITE_POSITIONS);
         allowed.add(WRITE_ORG_UNITS);
+        allowed.add(WRITE_POSITION_CATEGORIES);
+        allowed.add(WRITE_ASSIGNMENTS);
+        allowed.add(WRITE_REPLACEMENTS);
         allowed.add(WRITE_USERS);
         allowed.add(WRITE_SALARIES);
         allowed.add(WRITE_BENEFITS);
@@ -79,6 +82,9 @@ public final class RolePermissions {
         allowed.add(READ_PEOPLE);
         allowed.add(READ_POSITIONS);
         allowed.add(READ_ORG_UNITS);
+        allowed.add(READ_POSITION_CATEGORIES);
+        allowed.add(READ_ASSIGNMENTS);
+        allowed.add(READ_REPLACEMENTS);
         allowed.add(READ_USERS);
         allowed.add(READ_SALARIES);
         allowed.add(READ_BENEFITS);
