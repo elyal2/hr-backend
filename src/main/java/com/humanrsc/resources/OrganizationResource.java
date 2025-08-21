@@ -108,9 +108,21 @@ public class OrganizationResource {
         try {
             OrganizationalUnit created = organizationService.createOrganizationalUnit(unit);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.OrganizationalUnitValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the organizational unit", "INTERNAL_ERROR"))
                     .build();
         }
     }
@@ -118,10 +130,59 @@ public class OrganizationResource {
     @GET
     @Path("/units")
     @RolesAllowed({READ_ORG_UNITS})
-    public Response getAllUnits(@QueryParam("page") Integer page, @QueryParam("size") Integer size) {
+    public Response getAllUnits(@QueryParam("page") Integer page, @QueryParam("size") Integer size,
+                               // Dynamic filters for organizational units
+                               @QueryParam("name") String name,
+                               @QueryParam("description") String description,
+                               @QueryParam("location") String location,
+                               @QueryParam("country") String country,
+                               @QueryParam("costCenter") String costCenter,
+                               @QueryParam("status") String status,
+                               @QueryParam("organizationalLevel") Integer organizationalLevel) {
+        
+        // Build filters map
+        java.util.Map<String, Object> filters = new java.util.HashMap<>();
+        
+        if (name != null && !name.trim().isEmpty()) {
+            filters.put("name", name);
+        }
+        
+        if (description != null && !description.trim().isEmpty()) {
+            filters.put("description", description);
+        }
+        
+        if (location != null && !location.trim().isEmpty()) {
+            filters.put("location", location);
+        }
+        
+        if (country != null && !country.trim().isEmpty()) {
+            filters.put("country", country);
+        }
+        
+        if (costCenter != null && !costCenter.trim().isEmpty()) {
+            filters.put("costCenter", costCenter);
+        }
+        
+        if (status != null && !status.trim().isEmpty()) {
+            filters.put("status", status);
+        }
+        
+        if (organizationalLevel != null) {
+            filters.put("organizationalLevel", organizationalLevel);
+        }
+        
         int pageNum = page != null ? page : ConfigDefaults.DEFAULT_PAGE;
         int pageSize = size != null ? size : ConfigDefaults.DEFAULT_SIZE;
-        List<OrganizationalUnit> units = organizationService.findAllUnits(pageNum, pageSize);
+        
+        List<OrganizationalUnit> units;
+        if (filters.isEmpty()) {
+            // No filters, use default method
+            units = organizationService.findAllUnits(pageNum, pageSize);
+        } else {
+            // Use dynamic filtering
+            units = organizationService.findUnitsWithFilters(filters, pageNum, pageSize);
+        }
+        
         return Response.ok(units).build();
     }
 
@@ -154,16 +215,17 @@ public class OrganizationResource {
     @PUT
     @Path("/units/{id}")
     @RolesAllowed({WRITE_ORG_UNITS})
-    public Response updateOrganizationalUnit(@PathParam("id") String id, OrganizationalUnit unit) {
+    public Response updateOrganizationalUnit(@PathParam("id") String id, com.humanrsc.datamodel.dto.OrganizationalUnitDTO dto) {
         try {
-            // Crear ObjectID si no existe
-            if (unit.getObjectID() == null) {
+            // Establecer el ObjectID si no existe
+            if (dto.getObjectID() == null) {
                 String tenantID = ThreadLocalStorage.getTenantID();
-                unit.setObjectID(ObjectID.of(id, tenantID));
+                dto.setObjectID(ObjectID.of(id, tenantID));
             } else {
-                unit.getObjectID().setId(id);
+                dto.getObjectID().setId(id);
             }
-            OrganizationalUnit updated = organizationService.updateOrganizationalUnit(unit);
+            
+            OrganizationalUnit updated = organizationService.updateOrganizationalUnitFromDTO(id, dto);
             return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -171,6 +233,8 @@ public class OrganizationResource {
                     .build();
         }
     }
+    
+
 
     @DELETE
     @Path("/units/{id}")
@@ -199,9 +263,21 @@ public class OrganizationResource {
         try {
             JobPosition created = organizationService.createJobPosition(position);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.JobPositionValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the job position", "INTERNAL_ERROR"))
                     .build();
         }
     }
@@ -209,10 +285,54 @@ public class OrganizationResource {
     @GET
     @Path("/positions")
     @RolesAllowed({READ_POSITIONS})
-    public Response getAllPositions(@QueryParam("page") Integer page, @QueryParam("size") Integer size) {
+    public Response getAllPositions(@QueryParam("page") Integer page, @QueryParam("size") Integer size,
+                                   // Dynamic filters for job positions
+                                   @QueryParam("title") String title,
+                                   @QueryParam("description") String description,
+                                   @QueryParam("hierarchicalLevel") Integer hierarchicalLevel,
+                                   @QueryParam("status") String status,
+                                   @QueryParam("unitId") String unitId,
+                                   @QueryParam("categoryId") String categoryId) {
+        
+        // Build filters map
+        java.util.Map<String, Object> filters = new java.util.HashMap<>();
+        
+        if (title != null && !title.trim().isEmpty()) {
+            filters.put("title", title);
+        }
+        
+        if (description != null && !description.trim().isEmpty()) {
+            filters.put("description", description);
+        }
+        
+        if (hierarchicalLevel != null) {
+            filters.put("hierarchicalLevel", hierarchicalLevel);
+        }
+        
+        if (status != null && !status.trim().isEmpty()) {
+            filters.put("status", status);
+        }
+        
+        if (unitId != null && !unitId.trim().isEmpty()) {
+            filters.put("unit.objectID.id", unitId);
+        }
+        
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            filters.put("category.objectID.id", categoryId);
+        }
+        
         int pageNum = page != null ? page : ConfigDefaults.DEFAULT_PAGE;
         int pageSize = size != null ? size : ConfigDefaults.DEFAULT_SIZE;
-        List<JobPosition> positions = organizationService.findAllPositions(pageNum, pageSize);
+        
+        List<JobPosition> positions;
+        if (filters.isEmpty()) {
+            // No filters, use default method
+            positions = organizationService.findAllPositions(pageNum, pageSize);
+        } else {
+            // Use dynamic filtering
+            positions = organizationService.findPositionsWithFilters(filters, pageNum, pageSize);
+        }
+        
         return Response.ok(positions).build();
     }
 
@@ -261,10 +381,17 @@ public class OrganizationResource {
     @PUT
     @Path("/positions/{id}")
     @RolesAllowed({WRITE_POSITIONS})
-    public Response updateJobPosition(@PathParam("id") String id, JobPosition position) {
+    public Response updateJobPosition(@PathParam("id") String id, com.humanrsc.datamodel.dto.JobPositionDTO dto) {
         try {
-            position.getObjectID().setId(id);
-            JobPosition updated = organizationService.updateJobPosition(position);
+            // Establecer el ObjectID si no existe
+            if (dto.getObjectID() == null) {
+                String tenantID = ThreadLocalStorage.getTenantID();
+                dto.setObjectID(ObjectID.of(id, tenantID));
+            } else {
+                dto.getObjectID().setId(id);
+            }
+            
+            JobPosition updated = organizationService.updateJobPositionFromDTO(id, dto);
             return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -300,9 +427,21 @@ public class OrganizationResource {
         try {
             Employee created = organizationService.createEmployee(employee);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.EmployeeValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the employee", "INTERNAL_ERROR"))
                     .build();
         }
     }
@@ -312,24 +451,116 @@ public class OrganizationResource {
     @RolesAllowed({READ_PEOPLE})
     public Response getAllEmployees(@QueryParam("page") Integer page, @QueryParam("size") Integer size,
                                    @QueryParam("status") String status,
-                                   @QueryParam("type") String employeeType) {
+                                   @QueryParam("type") String employeeType,
+                                   @QueryParam("contractType") String contractType,
+                                   @QueryParam("gender") String gender,
+                                   @QueryParam("currency") String currency,
+                                   @QueryParam("terminated") Boolean terminated,
+                                   // Dynamic filters for any employee field
+                                   @QueryParam("nationalId") String nationalId,
+                                   @QueryParam("firstName") String firstName,
+                                   @QueryParam("lastName") String lastName,
+                                   @QueryParam("email") String email,
+                                   @QueryParam("employeeId") String employeeId,
+                                   @QueryParam("hireDate") String hireDate,
+                                   @QueryParam("dateOfBirth") String dateOfBirth) {
         List<Employee> employees;
         
+        // Build filters map
+        java.util.Map<String, Object> filters = new java.util.HashMap<>();
+        
+        // Legacy specific filters (for backward compatibility)
         if (status != null) {
-            employees = organizationService.findEmployeesByStatus(status);
-        } else if (employeeType != null) {
+            filters.put("status", status);
+        }
+        
+        if (employeeType != null) {
             try {
                 Employee.EmployeeType type = Employee.EmployeeType.valueOf(employeeType.toUpperCase());
-                employees = organizationService.findEmployeesByType(type);
+                filters.put("employeeType", type);
             } catch (IllegalArgumentException e) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity(new ErrorResponse("Invalid employee type", e.getMessage()))
                         .build();
             }
-        } else {
-            int pageNum = page != null ? page : ConfigDefaults.DEFAULT_PAGE;
-            int pageSize = size != null ? size : ConfigDefaults.DEFAULT_SIZE;
+        }
+        
+        if (contractType != null) {
+            filters.put("contractType", contractType);
+        }
+        
+        if (gender != null) {
+            filters.put("gender", gender);
+        }
+        
+        if (currency != null) {
+            filters.put("currency", currency);
+        }
+        
+        // New dynamic filters
+        if (nationalId != null && !nationalId.trim().isEmpty()) {
+            filters.put("nationalId", nationalId);
+        }
+        
+        if (firstName != null && !firstName.trim().isEmpty()) {
+            filters.put("firstName", firstName);
+        }
+        
+        if (lastName != null && !lastName.trim().isEmpty()) {
+            filters.put("lastName", lastName);
+        }
+        
+        if (email != null && !email.trim().isEmpty()) {
+            filters.put("email", email);
+        }
+        
+        if (employeeId != null && !employeeId.trim().isEmpty()) {
+            filters.put("employeeId", employeeId);
+        }
+        
+        if (hireDate != null && !hireDate.trim().isEmpty()) {
+            try {
+                java.time.LocalDate.parse(hireDate);
+                filters.put("hireDate", hireDate);
+            } catch (java.time.format.DateTimeParseException e) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ErrorResponse("Invalid hire date format", "Use YYYY-MM-DD format"))
+                        .build();
+            }
+        }
+        
+        if (dateOfBirth != null && !dateOfBirth.trim().isEmpty()) {
+            try {
+                java.time.LocalDate.parse(dateOfBirth);
+                filters.put("dateOfBirth", dateOfBirth);
+            } catch (java.time.format.DateTimeParseException e) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ErrorResponse("Invalid date of birth format", "Use YYYY-MM-DD format"))
+                        .build();
+            }
+        }
+        
+        // Handle terminated parameter
+        if (terminated != null) {
+            if (terminated) {
+                // User wants terminated employees
+                filters.put("status", Employee.STATUS_TERMINATED);
+            } else {
+                // User wants non-terminated employees (active and inactive only)
+                filters.put("status", new String[]{Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE});
+            }
+        }
+        // If terminated is null, no status filter is applied (returns all employees)
+        
+        int pageNum = page != null ? page : ConfigDefaults.DEFAULT_PAGE;
+        int pageSize = size != null ? size : ConfigDefaults.DEFAULT_SIZE;
+        
+        if (filters.isEmpty()) {
+            // No filters, use default method
             employees = organizationService.findAllEmployees(pageNum, pageSize);
+        } else {
+            // Use dynamic filtering
+            employees = organizationService.findEmployeesWithFilters(filters, pageNum, pageSize);
         }
         
         return Response.ok(employees).build();
@@ -427,9 +658,21 @@ public class OrganizationResource {
         try {
             EmployeeAssignment created = organizationService.createEmployeeAssignment(assignment);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.AssignmentValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the employee assignment", "INTERNAL_ERROR"))
                     .build();
         }
     }
@@ -455,10 +698,17 @@ public class OrganizationResource {
     @PUT
     @Path("/assignments/{id}")
     @RolesAllowed({WRITE_ASSIGNMENTS})
-    public Response updateEmployeeAssignment(@PathParam("id") String id, EmployeeAssignment assignment) {
+    public Response updateEmployeeAssignment(@PathParam("id") String id, com.humanrsc.datamodel.dto.EmployeeAssignmentDTO dto) {
         try {
-            assignment.getObjectID().setId(id);
-            EmployeeAssignment updated = organizationService.updateEmployeeAssignment(assignment);
+            // Establecer el ObjectID si no existe
+            if (dto.getObjectID() == null) {
+                String tenantID = ThreadLocalStorage.getTenantID();
+                dto.setObjectID(ObjectID.of(id, tenantID));
+            } else {
+                dto.getObjectID().setId(id);
+            }
+            
+            EmployeeAssignment updated = organizationService.updateEmployeeAssignmentFromDTO(id, dto);
             return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -504,6 +754,40 @@ public class OrganizationResource {
         try {
             TemporaryReplacement created = organizationService.createTemporaryReplacement(replacement);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.EmployeeValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the temporary replacement", "INTERNAL_ERROR"))
+                    .build();
+        }
+    }
+    
+    @PUT
+    @Path("/replacements/{id}")
+    @RolesAllowed({WRITE_REPLACEMENTS})
+    public Response updateTemporaryReplacement(@PathParam("id") String id, com.humanrsc.datamodel.dto.TemporaryReplacementDTO dto) {
+        try {
+            // Establecer el ObjectID si no existe
+            if (dto.getObjectID() == null) {
+                String tenantID = ThreadLocalStorage.getTenantID();
+                dto.setObjectID(ObjectID.of(id, tenantID));
+            } else {
+                dto.getObjectID().setId(id);
+            }
+            
+            TemporaryReplacement updated = organizationService.updateTemporaryReplacementFromDTO(id, dto);
+            return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
@@ -567,6 +851,40 @@ public class OrganizationResource {
         try {
             SalaryHistory created = organizationService.createSalaryHistory(salaryHistory);
             return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("Duplicate resource", e.getMessage(), "DUPLICATE_RESOURCE", e.getField(), e.getValue()))
+                    .build();
+        } catch (com.humanrsc.exceptions.EmployeeValidationException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage(), "VALIDATION_ERROR", e.getField(), null))
+                    .build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Internal server error", "An unexpected error occurred while creating the salary history", "INTERNAL_ERROR"))
+                    .build();
+        }
+    }
+    
+    @PUT
+    @Path("/salary-history/{id}")
+    @RolesAllowed({WRITE_SALARIES})
+    public Response updateSalaryHistory(@PathParam("id") String id, com.humanrsc.datamodel.dto.SalaryHistoryDTO dto) {
+        try {
+            // Establecer el ObjectID si no existe
+            if (dto.getObjectID() == null) {
+                String tenantID = ThreadLocalStorage.getTenantID();
+                dto.setObjectID(ObjectID.of(id, tenantID));
+            } else {
+                dto.getObjectID().setId(id);
+            }
+            
+            SalaryHistory updated = organizationService.updateSalaryHistoryFromDTO(id, dto);
+            return Response.ok(updated).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorResponse("Validation error", e.getMessage()))
@@ -711,13 +1029,38 @@ public class OrganizationResource {
     public static class ErrorResponse {
         private final String error;
         private final String message;
+        private final String errorCode;
+        private final String field;
+        private final String details;
 
         public ErrorResponse(String error, String message) {
             this.error = error;
             this.message = message;
+            this.errorCode = null;
+            this.field = null;
+            this.details = null;
+        }
+
+        public ErrorResponse(String error, String message, String errorCode) {
+            this.error = error;
+            this.message = message;
+            this.errorCode = errorCode;
+            this.field = null;
+            this.details = null;
+        }
+
+        public ErrorResponse(String error, String message, String errorCode, String field, String details) {
+            this.error = error;
+            this.message = message;
+            this.errorCode = errorCode;
+            this.field = field;
+            this.details = details;
         }
 
         public String getError() { return error; }
         public String getMessage() { return message; }
+        public String getErrorCode() { return errorCode; }
+        public String getField() { return field; }
+        public String getDetails() { return details; }
     }
 }

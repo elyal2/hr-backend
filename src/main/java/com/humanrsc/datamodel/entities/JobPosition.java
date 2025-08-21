@@ -25,6 +25,18 @@ public class JobPosition {
     public static final String STATUS_INACTIVE = "inactive";
     public static final String STATUS_DELETED = "deleted";
 
+    // Hierarchical level constants - extensible for future levels
+    public static final int HIERARCHICAL_LEVEL_1 = 1;  // Executive/C-Suite
+    public static final int HIERARCHICAL_LEVEL_2 = 2;  // Senior Management
+    public static final int HIERARCHICAL_LEVEL_3 = 3;  // Middle Management
+    public static final int HIERARCHICAL_LEVEL_4 = 4;  // Team Lead/Supervisor
+    public static final int HIERARCHICAL_LEVEL_5 = 5;  // Senior Individual Contributor
+    public static final int HIERARCHICAL_LEVEL_6 = 6;  // Individual Contributor
+    public static final int HIERARCHICAL_LEVEL_7 = 7;  // Junior Individual Contributor
+    public static final int HIERARCHICAL_LEVEL_8 = 8;  // Entry Level
+    public static final int HIERARCHICAL_LEVEL_9 = 9;  // Intern/Trainee
+    public static final int HIERARCHICAL_LEVEL_10 = 10; // Special/Advisory
+
     @EmbeddedId
     @NotNull
     private ObjectID objectID;
@@ -36,18 +48,20 @@ public class JobPosition {
     @Column(columnDefinition = "text")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "unit_id", referencedColumnName = "id"),
         @JoinColumn(name = "unit_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private OrganizationalUnit unit;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "category_id", referencedColumnName = "id"),
         @JoinColumn(name = "category_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private PositionCategory category;
 
     @NotNull
@@ -149,6 +163,15 @@ public class JobPosition {
 
     public void updateTimestamp() {
         this.dateUpdated = LocalDateTime.now();
+    }
+    
+    // Getters para IDs de relaciones (para serialización JSON)
+    public String getUnitId() {
+        return unit != null ? unit.getObjectID().getId() : null;
+    }
+    
+    public String getCategoryId() {
+        return category != null ? category.getObjectID().getId() : null;
     }
 
     // Business logic methods

@@ -12,83 +12,69 @@ import java.util.Optional;
 @ApplicationScoped
 public class PositionCategoryRepository implements PanacheRepositoryBase<PositionCategory, ObjectID> {
 
-    // Usar métodos estándar de PanacheRepositoryBase
+    // Basic finder methods - RLS handles tenant filtering automatically
 
     public Optional<PositionCategory> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
     }
 
     public Optional<PositionCategory> findById(String id) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
+        return find("objectID.id = ?1", id).firstResultOptional();
     }
 
-    // Usar métodos estándar de PanacheRepositoryBase
-
-    // Query methods for large datasets
+    // Query methods - RLS filters by tenant automatically
+    
     public List<PositionCategory> findAllActive() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by name", tenantID, PositionCategory.STATUS_ACTIVE).list();
+        return find("status = ?1 order by name", PositionCategory.STATUS_ACTIVE).list();
     }
 
     public List<PositionCategory> findActivePage(int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by name", tenantID, PositionCategory.STATUS_ACTIVE)
+        return find("status = ?1 order by name", PositionCategory.STATUS_ACTIVE)
                 .page(page, size).list();
     }
 
     public List<PositionCategory> findByStatus(String status) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by name", tenantID, status).list();
+        return find("status = ?1 order by name", status).list();
     }
 
     public List<PositionCategory> findByName(String name) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and name ILIKE ?2 order by name", tenantID, "%" + name + "%").list();
+        return find("name ILIKE ?1 order by name", "%" + name + "%").list();
     }
 
-    // Count methods
+    // Count methods - RLS filters by tenant automatically
+    
     public long countByStatus(String status) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2", tenantID, status);
+        return count("status = ?1", status);
     }
 
     public long countActive() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2", tenantID, PositionCategory.STATUS_ACTIVE);
+        return count("status = ?1", PositionCategory.STATUS_ACTIVE);
     }
 
     public long countTotal() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1", tenantID);
+        return count(); // RLS handles tenant filtering
     }
 
-    // Existence checks
+    // Existence checks - RLS filters by tenant automatically
+    
     public boolean existsById(String id) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID) > 0;
+        return count("objectID.id = ?1", id) > 0;
     }
 
     public boolean existsByName(String name) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and name = ?2", tenantID, name) > 0;
+        return count("name = ?1", name) > 0;
     }
 
-    // Business logic methods
+    // Business logic methods - RLS filters by tenant automatically
+    
     public long countPositionsByCategory(String categoryId) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and category.objectID.id = ?2 and status = ?3", 
-                    tenantID, categoryId, PositionCategory.STATUS_ACTIVE);
+        return count("category.objectID.id = ?1 and status = ?2", 
+                    categoryId, PositionCategory.STATUS_ACTIVE);
     }
 
     @Transactional
     public boolean deletePositionCategory(ObjectID objectID) {
-        String tenantID = getCurrentTenantID();
-        long deleted = delete("objectID = ?1 and objectID.tenantID = ?2", objectID, tenantID);
+        long deleted = delete("objectID = ?1", objectID);
         return deleted > 0;
-    }
-
-    private String getCurrentTenantID() {
-        return com.humanrsc.config.ThreadLocalStorage.getTenantID();
     }
 }

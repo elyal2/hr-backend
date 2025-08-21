@@ -13,29 +13,26 @@ import java.util.Optional;
 @ApplicationScoped
 public class EmployeeRepository implements PanacheRepositoryBase<Employee, ObjectID> {
 
-    // Usar métodos estándar de PanacheRepositoryBase
-
+    // Basic finder methods - RLS handles tenant filtering automatically
+    
     public Optional<Employee> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
     }
 
     public Optional<Employee> findById(String id) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
+        return find("objectID.id = ?1", id).firstResultOptional();
     }
 
     public Optional<Employee> findByEmployeeId(String employeeId) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and employeeId = ?2", tenantID, employeeId).firstResultOptional();
+        return find("employeeId = ?1", employeeId).firstResultOptional();
     }
 
     public Optional<Employee> findByEmail(String email) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and email = ?2", tenantID, email).firstResultOptional();
+        return find("email = ?1", email).firstResultOptional();
     }
 
-    // Usar métodos estándar de PanacheRepositoryBase
-
+    // Status change operations - RLS handles tenant filtering automatically
+    
     @Transactional
     public boolean activateEmployee(ObjectID objectID) {
         return update("status = ?1, dateUpdated = ?2 where objectID = ?3", 
@@ -60,198 +57,33 @@ public class EmployeeRepository implements PanacheRepositoryBase<Employee, Objec
                      Employee.STATUS_RESIGNED, resignationDate, java.time.LocalDateTime.now(), objectID) > 0;
     }
 
-    // Query methods for large datasets
-    public List<Employee> findAllActive() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE).list();
-    }
-
-    public List<Employee> findAllEmployed() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status in (?2, ?3) order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE).list();
-    }
-
-    public List<Employee> findByStatus(String status) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", tenantID, status).list();
-    }
-
-    public List<Employee> findByEmployeeType(Employee.EmployeeType employeeType) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and employeeType = ?2 order by lastName, firstName", 
-                   tenantID, employeeType).list();
-    }
-
-    public List<Employee> findByContractType(Employee.ContractType contractType) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and contractType = ?2 order by lastName, firstName", 
-                   tenantID, contractType).list();
-    }
-
-    public List<Employee> findByHireDateRange(LocalDate startDate, LocalDate endDate) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and hireDate between ?2 and ?3 order by hireDate", 
-                   tenantID, startDate, endDate).list();
-    }
-
-    public List<Employee> findBySalaryRange(java.math.BigDecimal minSalary, java.math.BigDecimal maxSalary) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and currentSalary between ?2 and ?3 order by currentSalary", 
-                   tenantID, minSalary, maxSalary).list();
-    }
-
-    // Pagination methods for large datasets
-    public List<Employee> findActivePage(int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE)
-               .page(io.quarkus.panache.common.Page.of(page, size))
-               .list();
-    }
-
-    public List<Employee> findAllEmployedPage(int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status in (?2, ?3) order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE)
-               .page(io.quarkus.panache.common.Page.of(page, size))
-               .list();
-    }
-
-    public List<Employee> findByStatusPage(String status, int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", tenantID, status)
-               .page(io.quarkus.panache.common.Page.of(page, size))
-               .list();
-    }
-
-    public List<Employee> findByEmployeeTypePage(Employee.EmployeeType employeeType, int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and employeeType = ?2 order by lastName, firstName", 
-                   tenantID, employeeType)
-               .page(io.quarkus.panache.common.Page.of(page, size))
-               .list();
-    }
-
-    // Query objects for complex operations
-    public io.quarkus.hibernate.orm.panache.PanacheQuery<Employee> findAllActiveQuery() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE);
-    }
-
-    public io.quarkus.hibernate.orm.panache.PanacheQuery<Employee> findAllEmployedQuery() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status in (?2, ?3) order by lastName, firstName", 
-                   tenantID, Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE);
-    }
-
-    public io.quarkus.hibernate.orm.panache.PanacheQuery<Employee> findByStatusQuery(String status) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by lastName, firstName", tenantID, status);
-    }
-
-    public io.quarkus.hibernate.orm.panache.PanacheQuery<Employee> findByEmployeeTypeQuery(Employee.EmployeeType employeeType) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and employeeType = ?2 order by lastName, firstName", 
-                   tenantID, employeeType);
-    }
-
-    // Count methods
-    public long countByStatus(String status) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2", tenantID, status);
-    }
-
-    public long countActive() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2", tenantID, Employee.STATUS_ACTIVE);
-    }
-
-    public long countEmployed() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status in (?2, ?3)", 
-                    tenantID, Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE);
-    }
-
-    public long countByEmployeeType(Employee.EmployeeType employeeType) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and employeeType = ?2", tenantID, employeeType);
-    }
-
-    public long countByContractType(Employee.ContractType contractType) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and contractType = ?2", tenantID, contractType);
-    }
-
-    public long countTotal() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1", tenantID);
-    }
-
-    public long countByCurrentPosition(ObjectID positionObjectID) {
-        String tenantID = getCurrentTenantID();
-        // Count employees currently assigned to this position
-        return count("objectID.tenantID = ?1 and objectID in " +
-                    "(select ea.employee.objectID from EmployeeAssignment ea " +
-                    "where ea.position.objectID = ?2 and ea.endDate is null)", 
-                    tenantID, positionObjectID);
-    }
-
-    // Existence checks
+    // Existence checks - RLS filters by tenant automatically
+    
     public boolean existsById(String id) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID) > 0;
+        return count("objectID.id = ?1", id) > 0;
     }
 
     public boolean existsByEmployeeId(String employeeId) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and employeeId = ?2", tenantID, employeeId) > 0;
+        return count("employeeId = ?1", employeeId) > 0;
     }
 
     public boolean existsByEmail(String email) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and email = ?2", tenantID, email) > 0;
+        return count("email = ?1", email) > 0;
     }
 
-    // Business logic methods
-    public List<Employee> findEmployeesHiredInYear(int year) {
-        String tenantID = getCurrentTenantID();
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
-        return find("objectID.tenantID = ?1 and hireDate between ?2 and ?3 order by hireDate", 
-                   tenantID, startDate, endDate).list();
+    // Business logic methods - RLS filters by tenant automatically
+    
+    public long countByCurrentPosition(ObjectID positionObjectID) {
+        return count("objectID in " +
+                    "(select ea.employee.objectID from EmployeeAssignment ea " +
+                    "where ea.position.objectID = ?1 and ea.endDate is null)", 
+                    positionObjectID);
     }
 
-    public List<Employee> findEmployeesTerminatedInYear(int year) {
-        String tenantID = getCurrentTenantID();
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
-        return find("objectID.tenantID = ?1 and terminationDate between ?2 and ?3 order by terminationDate", 
-                   tenantID, startDate, endDate).list();
-    }
-
-    public List<Employee> findEmployeesByTenureRange(int minYears, int maxYears) {
-        String tenantID = getCurrentTenantID();
-        LocalDate maxHireDate = LocalDate.now().minusYears(minYears);
-        LocalDate minHireDate = LocalDate.now().minusYears(maxYears);
-        return find("objectID.tenantID = ?1 and hireDate between ?2 and ?3 and status in (?4, ?5) order by hireDate", 
-                   tenantID, minHireDate, maxHireDate, Employee.STATUS_ACTIVE, Employee.STATUS_INACTIVE).list();
-    }
-
-    public List<Employee> findEmployeesByAgeRange(int minAge, int maxAge) {
-        String tenantID = getCurrentTenantID();
-        LocalDate maxBirthDate = LocalDate.now().minusYears(minAge);
-        LocalDate minBirthDate = LocalDate.now().minusYears(maxAge);
-        return find("objectID.tenantID = ?1 and dateOfBirth between ?2 and ?3 order by dateOfBirth", 
-                   tenantID, minBirthDate, maxBirthDate).list();
-    }
-
+    // Salary statistics - RLS filters by tenant automatically
+    
     public java.math.BigDecimal getAverageSalary() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and currentSalary is not null", 
-                   tenantID, Employee.STATUS_ACTIVE)
+        return find("status = ?1 and currentSalary is not null", Employee.STATUS_ACTIVE)
                .stream()
                .mapToDouble(e -> e.getCurrentSalary().doubleValue())
                .average()
@@ -262,25 +94,173 @@ public class EmployeeRepository implements PanacheRepositoryBase<Employee, Objec
     }
 
     public java.math.BigDecimal getMaxSalary() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and currentSalary is not null order by currentSalary desc", 
-                   tenantID, Employee.STATUS_ACTIVE)
+        return find("status = ?1 and currentSalary is not null order by currentSalary desc", 
+                   Employee.STATUS_ACTIVE)
                .firstResultOptional()
                .map(Employee::getCurrentSalary)
                .orElse(java.math.BigDecimal.ZERO);
     }
 
     public java.math.BigDecimal getMinSalary() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and currentSalary is not null order by currentSalary", 
-                   tenantID, Employee.STATUS_ACTIVE)
+        return find("status = ?1 and currentSalary is not null order by currentSalary", 
+                   Employee.STATUS_ACTIVE)
                .firstResultOptional()
                .map(Employee::getCurrentSalary)
                .orElse(java.math.BigDecimal.ZERO);
     }
 
-    // Utility method to get current tenant ID
-    private String getCurrentTenantID() {
-        return com.humanrsc.config.ThreadLocalStorage.getTenantID();
+    // Dynamic filtering methods - RLS handles tenant filtering automatically
+    
+    public List<Employee> findWithFilters(java.util.Map<String, Object> filters, int page, int size) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return find(query, parameters.toArray())
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
+    }
+    
+    public List<Employee> findWithFilters(java.util.Map<String, Object> filters) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return find(query, parameters.toArray()).list();
+    }
+    
+    public long countWithFilters(java.util.Map<String, Object> filters) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return count(query, parameters.toArray());
+    }
+    
+    // Helper method to build filter query - no tenant filtering needed (RLS handles it)
+    private String buildFilterQuery(java.util.Map<String, Object> filters, java.util.List<Object> parameters) {
+        StringBuilder queryBuilder = new StringBuilder();
+        boolean firstCondition = true;
+        
+        // Fields that should be case-insensitive (string fields)
+        java.util.Set<String> caseInsensitiveFields = java.util.Set.of(
+            "firstName", "lastName", "email", "nationalId", "employeeId"
+        );
+        
+        // Add filters dynamically
+        for (java.util.Map.Entry<String, Object> entry : filters.entrySet()) {
+            String field = entry.getKey();
+            Object value = entry.getValue();
+            
+            if (value != null) {
+                if (!firstCondition) {
+                    queryBuilder.append(" and ");
+                }
+                firstCondition = false;
+                
+                if (value instanceof Object[] || value.getClass().isArray()) {
+                    // Handle array values (e.g., status in ['active', 'inactive'])
+                    Object[] array = (Object[]) value;
+                    if (array.length > 0) {
+                        if (caseInsensitiveFields.contains(field)) {
+                            // Case-insensitive array search
+                            queryBuilder.append("LOWER(").append(field).append(") in (");
+                            for (int i = 0; i < array.length; i++) {
+                                if (i > 0) queryBuilder.append(", ");
+                                queryBuilder.append("LOWER(?").append(parameters.size() + i + 1).append(")");
+                            }
+                            queryBuilder.append(")");
+                        } else {
+                            // Case-sensitive array search
+                            queryBuilder.append(field).append(" in (?");
+                            queryBuilder.append(parameters.size() + 1);
+                            for (int i = 1; i < array.length; i++) {
+                                queryBuilder.append(", ?").append(parameters.size() + i + 1);
+                            }
+                            queryBuilder.append(")");
+                        }
+                        for (Object item : array) {
+                            parameters.add(item);
+                        }
+                    }
+                } else if (!value.toString().trim().isEmpty()) {
+                    // Handle single values
+                    if (caseInsensitiveFields.contains(field)) {
+                        // Case-insensitive partial search for string fields (LIKE with %)
+                        queryBuilder.append("LOWER(").append(field).append(") LIKE LOWER(?").append(parameters.size() + 1).append(")");
+                        parameters.add("%" + value + "%");
+                    } else {
+                        // Case-sensitive exact search for other fields
+                        queryBuilder.append(field).append(" = ?").append(parameters.size() + 1);
+                        parameters.add(value);
+                    }
+                }
+            }
+        }
+        
+        // If no conditions were added, return a query that matches all records
+        if (firstCondition) {
+            queryBuilder.append("1 = 1");
+        }
+        
+        queryBuilder.append(" order by lastName, firstName");
+        return queryBuilder.toString();
+    }
+    
+    // Advanced filtering with range queries - RLS handles tenant filtering
+    public List<Employee> findWithAdvancedFilters(java.util.Map<String, Object> exactFilters, 
+                                                 java.util.Map<String, java.util.Map<String, Object>> rangeFilters,
+                                                 int page, int size) {
+        
+        StringBuilder queryBuilder = new StringBuilder();
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        boolean firstCondition = true;
+        
+        // Add exact filters
+        for (java.util.Map.Entry<String, Object> entry : exactFilters.entrySet()) {
+            String field = entry.getKey();
+            Object value = entry.getValue();
+            
+            if (value != null && !value.toString().trim().isEmpty()) {
+                if (!firstCondition) {
+                    queryBuilder.append(" and ");
+                }
+                firstCondition = false;
+                queryBuilder.append(field).append(" = ?").append(parameters.size() + 1);
+                parameters.add(value);
+            }
+        }
+        
+        // Add range filters
+        for (java.util.Map.Entry<String, java.util.Map<String, Object>> entry : rangeFilters.entrySet()) {
+            String field = entry.getKey();
+            java.util.Map<String, Object> range = entry.getValue();
+            
+            if (range.containsKey("min") && range.get("min") != null) {
+                if (!firstCondition) {
+                    queryBuilder.append(" and ");
+                }
+                firstCondition = false;
+                queryBuilder.append(field).append(" >= ?").append(parameters.size() + 1);
+                parameters.add(range.get("min"));
+            }
+            
+            if (range.containsKey("max") && range.get("max") != null) {
+                if (!firstCondition) {
+                    queryBuilder.append(" and ");
+                }
+                firstCondition = false;
+                queryBuilder.append(field).append(" <= ?").append(parameters.size() + 1);
+                parameters.add(range.get("max"));
+            }
+        }
+        
+        // If no conditions were added, return a query that matches all records
+        if (firstCondition) {
+            queryBuilder.append("1 = 1");
+        }
+        
+        queryBuilder.append(" order by lastName, firstName");
+        
+        return find(queryBuilder.toString(), parameters.toArray())
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
 }

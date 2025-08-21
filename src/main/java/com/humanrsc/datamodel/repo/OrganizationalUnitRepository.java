@@ -12,68 +12,72 @@ import java.util.Optional;
 @ApplicationScoped
 public class OrganizationalUnitRepository implements PanacheRepositoryBase<OrganizationalUnit, ObjectID> {
 
-    // Basic CRUD operations - usar métodos estándar de Panache
+    // Basic finder methods - RLS handles tenant filtering automatically
 
     public Optional<OrganizationalUnit> findByObjectID(ObjectID objectID) {
         return find("objectID = ?1", objectID).firstResultOptional();
     }
 
     public Optional<OrganizationalUnit> findById(String id) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.id = ?1 and objectID.tenantID = ?2", id, tenantID).firstResultOptional();
+        return find("objectID.id = ?1", id).firstResultOptional();
     }
 
-    // Usar métodos estándar de PanacheRepositoryBase
-
-    // Query methods for large datasets
+    // Query methods - RLS filters by tenant automatically
+    
     public List<OrganizationalUnit> findAllActive() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by name", tenantID, OrganizationalUnit.STATUS_ACTIVE).list();
+        return find("status = ?1 order by name", OrganizationalUnit.STATUS_ACTIVE).list();
     }
 
     public List<OrganizationalUnit> findActivePage(int page, int size) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 order by name", tenantID, OrganizationalUnit.STATUS_ACTIVE)
+        return find("status = ?1 order by name", OrganizationalUnit.STATUS_ACTIVE)
                 .page(page, size).list();
     }
 
     public List<OrganizationalUnit> findRootUnits() {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and parentUnit is null order by name", 
-                   tenantID, OrganizationalUnit.STATUS_ACTIVE).list();
+        return find("status = ?1 and parentUnit is null order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE).list();
     }
 
     public List<OrganizationalUnit> findByParentUnit(String parentUnitId) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and parentUnit.objectID.id = ?3 order by name", 
-                   tenantID, OrganizationalUnit.STATUS_ACTIVE, parentUnitId).list();
+        return find("status = ?1 and parentUnit.objectID.id = ?2 order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE, parentUnitId).list();
     }
 
     public long countByParentUnit(ObjectID parentUnitObjectID) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and parentUnit.objectID = ?2", tenantID, parentUnitObjectID);
+        return count("parentUnit.objectID = ?1", parentUnitObjectID);
     }
-
-
 
     public long countActive() {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2", tenantID, OrganizationalUnit.STATUS_ACTIVE);
+        return count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
     }
 
+    // Organizational level methods - RLS filters by tenant automatically
+    
+    public List<OrganizationalUnit> findByOrganizationalLevel(Integer level) {
+        return find("status = ?1 and organizationalLevel = ?2 order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE, level).list();
+    }
+
+    public List<OrganizationalUnit> findByOrganizationalLevelRange(Integer minLevel, Integer maxLevel) {
+        return find("status = ?1 and organizationalLevel between ?2 and ?3 order by organizationalLevel, name", 
+                   OrganizationalUnit.STATUS_ACTIVE, minLevel, maxLevel).list();
+    }
+
+    public long countByOrganizationalLevel(Integer level) {
+        return count("status = ?1 and organizationalLevel = ?2", 
+                    OrganizationalUnit.STATUS_ACTIVE, level);
+    }
+
+    // Delete operation - RLS handles tenant filtering automatically
+    
     @Transactional
     public boolean deleteOrganizationalUnit(ObjectID objectID) {
-        String tenantID = getCurrentTenantID();
-        long deleted = delete("objectID = ?1 and objectID.tenantID = ?2", objectID, tenantID);
+        long deleted = delete("objectID = ?1", objectID);
         return deleted > 0;
     }
 
-
-
-    // SQL nativo simple: unidades con contadores
+    // Native SQL query for units with counts - RLS handles tenant filtering automatically
     public List<Object[]> getUnitsWithCounts() {
-        String tenantID = getCurrentTenantID();
-        
         String sql = """
             SELECT 
                 ou.id, ou.tenant_id, ou.name, ou.description, ou.cost_center, 
@@ -89,7 +93,7 @@ public class OrganizationalUnitRepository implements PanacheRepositoryBase<Organ
                 AND ea.end_date IS NULL
             LEFT JOIN hr_app.job_positions jp ON ea.position_id = jp.id 
                 AND ea.tenant_id = jp.tenant_id
-            WHERE ou.tenant_id = ?1 AND ou.status = 'active'
+            WHERE ou.status = 'active'
             GROUP BY ou.id, ou.tenant_id, ou.name, ou.description, ou.cost_center, 
                      ou.location, ou.country, ou.status, ou.date_created, ou.date_updated,
                      ou.parent_unit_id, ou.organizational_level
@@ -98,39 +102,102 @@ public class OrganizationalUnitRepository implements PanacheRepositoryBase<Organ
         
         @SuppressWarnings("unchecked")
         List<Object[]> result = getEntityManager().createNativeQuery(sql)
-                .setParameter(1, tenantID)
                 .getResultList();
         return result;
     }
 
-    private String getCurrentTenantID() {
-        return com.humanrsc.config.ThreadLocalStorage.getTenantID();
+    // Dynamic filtering methods - RLS handles tenant filtering automatically
+    
+    public List<OrganizationalUnit> findWithFilters(java.util.Map<String, Object> filters, int page, int size) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return find(query, parameters.toArray())
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
-
-    /**
-     * Busca unidades por nivel organizacional
-     */
-    public List<OrganizationalUnit> findByOrganizationalLevel(Integer level) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and organizationalLevel = ?3 order by name", 
-                   tenantID, OrganizationalUnit.STATUS_ACTIVE, level).list();
+    
+    public List<OrganizationalUnit> findWithFilters(java.util.Map<String, Object> filters) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return find(query, parameters.toArray()).list();
     }
-
-    /**
-     * Busca unidades por rango de niveles organizacionales
-     */
-    public List<OrganizationalUnit> findByOrganizationalLevelRange(Integer minLevel, Integer maxLevel) {
-        String tenantID = getCurrentTenantID();
-        return find("objectID.tenantID = ?1 and status = ?2 and organizationalLevel between ?3 and ?4 order by organizationalLevel, name", 
-                   tenantID, OrganizationalUnit.STATUS_ACTIVE, minLevel, maxLevel).list();
+    
+    public long countWithFilters(java.util.Map<String, Object> filters) {
+        java.util.List<Object> parameters = new java.util.ArrayList<>();
+        String query = buildFilterQuery(filters, parameters);
+        
+        return count(query, parameters.toArray());
     }
-
-    /**
-     * Cuenta unidades por nivel organizacional
-     */
-    public long countByOrganizationalLevel(Integer level) {
-        String tenantID = getCurrentTenantID();
-        return count("objectID.tenantID = ?1 and status = ?2 and organizationalLevel = ?3", 
-                    tenantID, OrganizationalUnit.STATUS_ACTIVE, level);
+    
+    // Helper method to build filter query - no tenant filtering needed (RLS handles it)
+    private String buildFilterQuery(java.util.Map<String, Object> filters, java.util.List<Object> parameters) {
+        StringBuilder queryBuilder = new StringBuilder();
+        boolean firstCondition = true;
+        
+        // Fields that should be case-insensitive (string fields)
+        java.util.Set<String> caseInsensitiveFields = java.util.Set.of(
+            "name", "description", "location", "country", "costCenter"
+        );
+        
+        // Add filters dynamically
+        for (java.util.Map.Entry<String, Object> entry : filters.entrySet()) {
+            String field = entry.getKey();
+            Object value = entry.getValue();
+            
+            if (value != null) {
+                if (!firstCondition) {
+                    queryBuilder.append(" and ");
+                }
+                firstCondition = false;
+                
+                if (value instanceof Object[] || value.getClass().isArray()) {
+                    // Handle array values (e.g., status in ['active', 'inactive'])
+                    Object[] array = (Object[]) value;
+                    if (array.length > 0) {
+                        if (caseInsensitiveFields.contains(field)) {
+                            // Case-insensitive array search
+                            queryBuilder.append("LOWER(").append(field).append(") in (");
+                            for (int i = 0; i < array.length; i++) {
+                                if (i > 0) queryBuilder.append(", ");
+                                queryBuilder.append("LOWER(?").append(parameters.size() + i + 1).append(")");
+                            }
+                            queryBuilder.append(")");
+                        } else {
+                            // Case-sensitive array search
+                            queryBuilder.append(field).append(" in (?");
+                            queryBuilder.append(parameters.size() + 1);
+                            for (int i = 1; i < array.length; i++) {
+                                queryBuilder.append(", ?").append(parameters.size() + i + 1);
+                            }
+                            queryBuilder.append(")");
+                        }
+                        for (Object item : array) {
+                            parameters.add(item);
+                        }
+                    }
+                } else if (!value.toString().trim().isEmpty()) {
+                    // Handle single values
+                    if (caseInsensitiveFields.contains(field)) {
+                        // Case-insensitive partial search for string fields (LIKE with %)
+                        queryBuilder.append("LOWER(").append(field).append(") LIKE LOWER(?").append(parameters.size() + 1).append(")");
+                        parameters.add("%" + value + "%");
+                    } else {
+                        // Case-sensitive exact search for other fields
+                        queryBuilder.append(field).append(" = ?").append(parameters.size() + 1);
+                        parameters.add(value);
+                    }
+                }
+            }
+        }
+        
+        // If no conditions were added, return a query that matches all records
+        if (firstCondition) {
+            queryBuilder.append("1 = 1");
+        }
+        
+        queryBuilder.append(" order by name");
+        return queryBuilder.toString();
     }
 }

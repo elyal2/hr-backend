@@ -30,33 +30,37 @@ public class EmployeeAssignment {
     @NotNull
     private ObjectID objectID;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "employee_id", referencedColumnName = "id"),
         @JoinColumn(name = "employee_tenant_id", referencedColumnName = "tenant_id")
     })
     @NotNull
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee employee;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "position_id", referencedColumnName = "id"),
         @JoinColumn(name = "position_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private JobPosition position;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "unit_id", referencedColumnName = "id"),
         @JoinColumn(name = "unit_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private OrganizationalUnit unit;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "manager_id", referencedColumnName = "id"),
         @JoinColumn(name = "manager_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee manager;
 
     @NotNull
@@ -156,6 +160,23 @@ public class EmployeeAssignment {
 
     public boolean isResignation() {
         return MOVEMENT_REASON_RESIGNATION.equals(movementReason);
+    }
+    
+    // Getters para IDs de relaciones (para serialización JSON)
+    public String getEmployeeId() {
+        return employee != null ? employee.getObjectID().getId() : null;
+    }
+    
+    public String getPositionId() {
+        return position != null ? position.getObjectID().getId() : null;
+    }
+    
+    public String getUnitId() {
+        return unit != null ? unit.getObjectID().getId() : null;
+    }
+    
+    public String getManagerId() {
+        return manager != null ? manager.getObjectID().getId() : null;
     }
 
     @Override

@@ -24,27 +24,30 @@ public class TemporaryReplacement {
     @NotNull
     private ObjectID objectID;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "original_employee_id", referencedColumnName = "id"),
         @JoinColumn(name = "original_employee_tenant_id", referencedColumnName = "tenant_id")
     })
     @NotNull
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee originalEmployee;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "replacement_employee_id", referencedColumnName = "id"),
         @JoinColumn(name = "replacement_employee_tenant_id", referencedColumnName = "tenant_id")
     })
     @NotNull
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee replacementEmployee;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "position_id", referencedColumnName = "id"),
         @JoinColumn(name = "position_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private JobPosition position;
 
     @NotNull
@@ -113,6 +116,19 @@ public class TemporaryReplacement {
 
     public void updateTimestamp() {
         this.dateUpdated = LocalDateTime.now();
+    }
+    
+    // Getters para IDs de relaciones (para serialización JSON)
+    public String getOriginalEmployeeId() {
+        return originalEmployee != null ? originalEmployee.getObjectID().getId() : null;
+    }
+    
+    public String getReplacementEmployeeId() {
+        return replacementEmployee != null ? replacementEmployee.getObjectID().getId() : null;
+    }
+    
+    public String getPositionId() {
+        return position != null ? position.getObjectID().getId() : null;
     }
 
     @Override

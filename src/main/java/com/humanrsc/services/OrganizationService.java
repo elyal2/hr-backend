@@ -52,11 +52,13 @@ public class OrganizationService {
     }
 
     public List<PositionCategory> findAllCategories() {
-        return positionCategoryRepository.findAllActive();
+        return positionCategoryRepository.find("status = ?1 order by name", PositionCategory.STATUS_ACTIVE).list();
     }
 
     public List<PositionCategory> findAllCategories(int page, int size) {
-        return positionCategoryRepository.findActivePage(page, size);
+        return positionCategoryRepository.find("status = ?1 order by name", PositionCategory.STATUS_ACTIVE)
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
 
     @Transactional
@@ -99,6 +101,20 @@ public class OrganizationService {
             unit.setObjectID(ObjectID.of(id, tenantID));
         }
         
+        // Validate organizational level
+        if (unit.getOrganizationalLevel() != null && unit.getOrganizationalLevel() <= 0) {
+            throw new com.humanrsc.exceptions.OrganizationalUnitValidationException("organizationalLevel", "INVALID_ORGANIZATIONAL_LEVEL", 
+                "Organizational level must be greater than zero");
+        }
+        
+        // Validate name uniqueness (optional business rule)
+        if (unit.getName() != null && !unit.getName().trim().isEmpty()) {
+            // You could add a repository method to check name uniqueness if needed
+            // if (organizationalUnitRepository.existsByName(unit.getName())) {
+            //     throw new DuplicateResourceException("name", unit.getName(), "OrganizationalUnit");
+            // }
+        }
+        
         organizationalUnitRepository.persist(unit);
         return unit;
     }
@@ -108,26 +124,86 @@ public class OrganizationService {
     }
 
     public List<OrganizationalUnit> findAllUnits() {
-        return organizationalUnitRepository.findAllActive();
+        return organizationalUnitRepository.find("status = ?1 order by name", OrganizationalUnit.STATUS_ACTIVE).list();
     }
 
     public List<OrganizationalUnit> findAllUnits(int page, int size) {
-        return organizationalUnitRepository.findActivePage(page, size);
+        return organizationalUnitRepository.find("status = ?1 order by name", OrganizationalUnit.STATUS_ACTIVE)
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
 
     public List<OrganizationalUnit> findRootUnits() {
-        return organizationalUnitRepository.findRootUnits();
+        return organizationalUnitRepository.find("status = ?1 and parentUnit is null order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE).list();
     }
 
     public List<OrganizationalUnit> findChildUnits(String parentUnitId) {
-        return organizationalUnitRepository.findByParentUnit(parentUnitId);
+        return organizationalUnitRepository.find("status = ?1 and parentUnit.objectID.id = ?2 order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE, parentUnitId).list();
     }
 
     @Transactional
     public OrganizationalUnit updateOrganizationalUnit(OrganizationalUnit unit) {
         return organizationalUnitRepository.getEntityManager().merge(unit);
     }
-
+    
+    @Transactional
+    public OrganizationalUnit updateOrganizationalUnitFromDTO(String id, com.humanrsc.datamodel.dto.OrganizationalUnitDTO dto) {
+        Optional<OrganizationalUnit> existingUnit = organizationalUnitRepository.findById(id);
+        if (existingUnit.isEmpty()) {
+            throw new IllegalArgumentException("Organizational unit not found: " + id);
+        }
+        
+        OrganizationalUnit unit = existingUnit.get();
+        
+        // Actualizar campos del DTO
+        unit.setName(dto.getName());
+        unit.setDescription(dto.getDescription());
+        unit.setCostCenter(dto.getCostCenter());
+        unit.setLocation(dto.getLocation());
+        unit.setCountry(dto.getCountry());
+        unit.setStatus(dto.getStatus());
+        unit.setOrganizationalLevel(dto.getOrganizationalLevel());
+        
+        // Manejar parentUnitId
+        if (dto.getParentUnitId() != null && !dto.getParentUnitId().trim().isEmpty()) {
+            Optional<OrganizationalUnit> parentUnit = organizationalUnitRepository.findById(dto.getParentUnitId());
+            if (parentUnit.isPresent()) {
+                unit.setParentUnit(parentUnit.get());
+            } else {
+                throw new IllegalArgumentException("Parent unit not found: " + dto.getParentUnitId());
+            }
+        } else {
+            unit.setParentUnit(null); // Sin padre
+        }
+        
+        return organizationalUnitRepository.getEntityManager().merge(unit);
+    }
+    
+    @Transactional
+    public boolean setParentUnit(String unitId, String parentUnitId) {
+        try {
+            Optional<OrganizationalUnit> unit = organizationalUnitRepository.findById(unitId);
+            if (unit.isEmpty()) {
+                throw new IllegalArgumentException("Unit not found: " + unitId);
+            }
+            
+            Optional<OrganizationalUnit> parent = organizationalUnitRepository.findById(parentUnitId);
+            if (parent.isEmpty()) {
+                throw new IllegalArgumentException("Parent unit not found: " + parentUnitId);
+            }
+            
+            OrganizationalUnit unitToUpdate = unit.get();
+            unitToUpdate.setParentUnit(parent.get());
+            
+            organizationalUnitRepository.getEntityManager().merge(unitToUpdate);
+            return true;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to set parent unit: " + e.getMessage());
+        }
+    }
+    
     @Transactional
     public boolean deleteOrganizationalUnit(String id) {
         Optional<OrganizationalUnit> unit = organizationalUnitRepository.findById(id);
@@ -149,6 +225,32 @@ public class OrganizationService {
         return false;
     }
 
+    // Dynamic filtering methods for units
+    public List<OrganizationalUnit> findUnitsWithFilters(java.util.Map<String, Object> filters, int page, int size) {
+        return organizationalUnitRepository.findWithFilters(filters, page, size);
+    }
+    
+    public List<OrganizationalUnit> findUnitsWithFilters(java.util.Map<String, Object> filters) {
+        return organizationalUnitRepository.findWithFilters(filters);
+    }
+    
+    public long countUnitsWithFilters(java.util.Map<String, Object> filters) {
+        return organizationalUnitRepository.countWithFilters(filters);
+    }
+    
+    // Dynamic filtering methods for positions
+    public List<JobPosition> findPositionsWithFilters(java.util.Map<String, Object> filters, int page, int size) {
+        return jobPositionRepository.findWithFilters(filters, page, size);
+    }
+    
+    public List<JobPosition> findPositionsWithFilters(java.util.Map<String, Object> filters) {
+        return jobPositionRepository.findWithFilters(filters);
+    }
+    
+    public long countPositionsWithFilters(java.util.Map<String, Object> filters) {
+        return jobPositionRepository.countWithFilters(filters);
+    }
+
     // ========== JOB POSITIONS ==========
 
     @Transactional
@@ -157,6 +259,20 @@ public class OrganizationService {
             String id = UUID.randomUUID().toString();
             String tenantID = ThreadLocalStorage.getTenantID();
             position.setObjectID(ObjectID.of(id, tenantID));
+        }
+        
+        // Validate hierarchical level
+        if (!isValidHierarchicalLevel(position.getHierarchicalLevel())) {
+            throw new com.humanrsc.exceptions.JobPositionValidationException("hierarchicalLevel", "INVALID_HIERARCHICAL_LEVEL", 
+                "Hierarchical level must be between " + JobPosition.HIERARCHICAL_LEVEL_1 + " and " + JobPosition.HIERARCHICAL_LEVEL_10);
+        }
+        
+        // Validate title uniqueness (optional business rule)
+        if (position.getTitle() != null && !position.getTitle().trim().isEmpty()) {
+            // You could add a repository method to check title uniqueness if needed
+            // if (jobPositionRepository.existsByTitle(position.getTitle())) {
+            //     throw new DuplicateResourceException("title", position.getTitle(), "JobPosition");
+            // }
         }
         
         jobPositionRepository.persist(position);
@@ -168,31 +284,81 @@ public class OrganizationService {
     }
 
     public List<JobPosition> findAllPositions() {
-        return jobPositionRepository.findAllActive();
+        return jobPositionRepository.find("status = ?1 order by title", JobPosition.STATUS_ACTIVE).list();
     }
 
     public List<JobPosition> findAllPositions(int page, int size) {
-        return jobPositionRepository.findActivePage(page, size);
+        return jobPositionRepository.find("status = ?1 order by title", JobPosition.STATUS_ACTIVE)
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
 
     public List<JobPosition> findPositionsByUnit(String unitId) {
-        return jobPositionRepository.findByUnit(unitId);
+        return jobPositionRepository.find("status = ?1 and unit.objectID.id = ?2 order by title", 
+                   JobPosition.STATUS_ACTIVE, unitId).list();
     }
 
     public List<JobPosition> findPositionsByCategory(String categoryId) {
-        return jobPositionRepository.findByCategory(categoryId);
+        return jobPositionRepository.find("status = ?1 and category.objectID.id = ?2 order by title", 
+                   JobPosition.STATUS_ACTIVE, categoryId).list();
     }
 
     public List<JobPosition> findPositionsByHierarchicalLevel(Integer level) {
-        return jobPositionRepository.findByHierarchicalLevel(level);
+        return jobPositionRepository.find("status = ?1 and hierarchicalLevel = ?2 order by title", 
+                   JobPosition.STATUS_ACTIVE, level).list();
     }
 
     public List<JobPosition> findPositionsByLevelRange(Integer minLevel, Integer maxLevel) {
-        return jobPositionRepository.findByLevelRange(minLevel, maxLevel);
+        return jobPositionRepository.find("status = ?1 and hierarchicalLevel >= ?2 and hierarchicalLevel <= ?3 order by hierarchicalLevel, title", 
+                   JobPosition.STATUS_ACTIVE, minLevel, maxLevel).list();
     }
 
     @Transactional
     public JobPosition updateJobPosition(JobPosition position) {
+        position.updateTimestamp();
+        return jobPositionRepository.getEntityManager().merge(position);
+    }
+    
+    @Transactional
+    public JobPosition updateJobPositionFromDTO(String id, com.humanrsc.datamodel.dto.JobPositionDTO dto) {
+        Optional<JobPosition> existingPosition = jobPositionRepository.findById(id);
+        if (existingPosition.isEmpty()) {
+            throw new IllegalArgumentException("Job position not found: " + id);
+        }
+        
+        JobPosition position = existingPosition.get();
+        
+        // Actualizar campos del DTO
+        position.setTitle(dto.getTitle());
+        position.setDescription(dto.getDescription());
+        position.setJobCode(dto.getJobCode());
+        position.setStatus(dto.getStatus());
+        position.setHierarchicalLevel(dto.getHierarchicalLevel());
+        
+        // Manejar unitId
+        if (dto.getUnitId() != null && !dto.getUnitId().trim().isEmpty()) {
+            Optional<OrganizationalUnit> unit = organizationalUnitRepository.findById(dto.getUnitId());
+            if (unit.isPresent()) {
+                position.setUnit(unit.get());
+            } else {
+                throw new IllegalArgumentException("Unit not found: " + dto.getUnitId());
+            }
+        } else {
+            position.setUnit(null);
+        }
+        
+        // Manejar categoryId
+        if (dto.getCategoryId() != null && !dto.getCategoryId().trim().isEmpty()) {
+            Optional<PositionCategory> category = positionCategoryRepository.findById(dto.getCategoryId());
+            if (category.isPresent()) {
+                position.setCategory(category.get());
+            } else {
+                throw new IllegalArgumentException("Category not found: " + dto.getCategoryId());
+            }
+        } else {
+            position.setCategory(null);
+        }
+        
         position.updateTimestamp();
         return jobPositionRepository.getEntityManager().merge(position);
     }
@@ -222,14 +388,59 @@ public class OrganizationService {
             employee.setObjectID(ObjectID.of(id, tenantID));
         }
         
-        // Validate employee ID uniqueness
-        if (employeeRepository.existsByEmployeeId(employee.getEmployeeId())) {
-            throw new IllegalArgumentException("Employee ID " + employee.getEmployeeId() + " already exists");
+        // Validate employee ID uniqueness and check if terminated
+        Optional<Employee> existingEmployee = employeeRepository.findByEmployeeId(employee.getEmployeeId());
+        if (existingEmployee.isPresent()) {
+            Employee existing = existingEmployee.get();
+            if (existing.isTerminated()) {
+                throw new com.humanrsc.exceptions.EmployeeValidationException("employeeId", "EMPLOYEE_TERMINATED", 
+                    String.format("Employee with ID '%s' exists but is terminated (termination date: %s). Cannot create new employee with same ID.", 
+                        employee.getEmployeeId(), existing.getTerminationDate()));
+            } else if (existing.isResigned()) {
+                throw new com.humanrsc.exceptions.EmployeeValidationException("employeeId", "EMPLOYEE_RESIGNED", 
+                    String.format("Employee with ID '%s' exists but is resigned (resignation date: %s). Cannot create new employee with same ID.", 
+                        employee.getEmployeeId(), existing.getTerminationDate()));
+            } else {
+                throw new com.humanrsc.exceptions.DuplicateResourceException("employeeId", employee.getEmployeeId(), "Employee");
+            }
         }
         
         // Validate email uniqueness
         if (employeeRepository.existsByEmail(employee.getEmail())) {
-            throw new IllegalArgumentException("Email " + employee.getEmail() + " already exists");
+            throw new com.humanrsc.exceptions.DuplicateResourceException("email", employee.getEmail(), "Employee");
+        }
+        
+        // Validate hire date logic
+        if (employee.getHireDate() != null && employee.getDateOfBirth() != null) {
+            if (employee.getHireDate().isBefore(employee.getDateOfBirth())) {
+                throw new com.humanrsc.exceptions.EmployeeValidationException("hireDate", "HIRE_DATE_BEFORE_BIRTH", 
+                    "Hire date cannot be before date of birth");
+            }
+        }
+        
+        // Validate hire date is not too far in the future (optional business rule)
+        if (employee.getHireDate() != null && employee.getHireDate().isAfter(LocalDate.now().plusYears(1))) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("hireDate", "HIRE_DATE_TOO_FUTURE", 
+                "Hire date cannot be more than 1 year in the future");
+        }
+        
+        // Validate salary is positive
+        if (employee.getCurrentSalary() != null && employee.getCurrentSalary().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("currentSalary", "INVALID_SALARY", 
+                "Salary must be greater than zero");
+        }
+        
+        // Validate gender if provided
+        if (!isValidGender(employee.getGender())) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("gender", "INVALID_GENDER", 
+                "Gender must be one of: " + Employee.GENDER_MALE + ", " + Employee.GENDER_FEMALE + ", " + 
+                Employee.GENDER_OTHER + ", " + Employee.GENDER_PREFER_NOT_TO_SAY + ", " + Employee.GENDER_NON_BINARY);
+        }
+        
+        // Validate currency
+        if (!isValidCurrency(employee.getCurrency())) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("currency", "INVALID_CURRENCY", 
+                "Currency must be a valid ISO 4217 code (e.g., EUR, USD, GBP, JPY, etc.)");
         }
         
         employeeRepository.persist(employee);
@@ -245,23 +456,36 @@ public class OrganizationService {
     }
 
     public List<Employee> findAllEmployees() {
-        return employeeRepository.findAllEmployed();
+        return employeeRepository.findAll().list();
     }
 
     public List<Employee> findAllEmployees(int page, int size) {
-        return employeeRepository.findAllEmployedPage(page, size);
+        return employeeRepository.findAll()
+               .page(io.quarkus.panache.common.Page.of(page, size))
+               .list();
     }
-
+    
     public List<Employee> findActiveEmployees() {
-        return employeeRepository.findAllActive();
+        return employeeRepository.find("status = ?1 order by lastName, firstName", Employee.STATUS_ACTIVE).list();
     }
-
-    public List<Employee> findEmployeesByStatus(String status) {
-        return employeeRepository.findByStatus(status);
+    
+    // Dynamic filtering methods
+    public List<Employee> findEmployeesWithFilters(java.util.Map<String, Object> filters) {
+        return employeeRepository.findWithFilters(filters);
     }
-
-    public List<Employee> findEmployeesByType(Employee.EmployeeType employeeType) {
-        return employeeRepository.findByEmployeeType(employeeType);
+    
+    public List<Employee> findEmployeesWithFilters(java.util.Map<String, Object> filters, int page, int size) {
+        return employeeRepository.findWithFilters(filters, page, size);
+    }
+    
+    public long countEmployeesWithFilters(java.util.Map<String, Object> filters) {
+        return employeeRepository.countWithFilters(filters);
+    }
+    
+    public List<Employee> findEmployeesWithAdvancedFilters(java.util.Map<String, Object> exactFilters, 
+                                                         java.util.Map<String, java.util.Map<String, Object>> rangeFilters,
+                                                         int page, int size) {
+        return employeeRepository.findWithAdvancedFilters(exactFilters, rangeFilters, page, size);
     }
 
     @Transactional
@@ -298,6 +522,32 @@ public class OrganizationService {
             assignment.setObjectID(ObjectID.of(id, tenantID));
         }
         
+        // Validate start date
+        if (assignment.getStartDate() == null) {
+            throw new com.humanrsc.exceptions.AssignmentValidationException("startDate", "MISSING_START_DATE", 
+                "Start date is required");
+        }
+        
+        // Validate end date logic
+        if (assignment.getEndDate() != null && assignment.getStartDate() != null) {
+            if (assignment.getEndDate().isBefore(assignment.getStartDate())) {
+                throw new com.humanrsc.exceptions.AssignmentValidationException("endDate", "END_DATE_BEFORE_START", 
+                    "End date cannot be before start date");
+            }
+        }
+        
+        // Validate employee exists
+        if (assignment.getEmployee() == null) {
+            throw new com.humanrsc.exceptions.AssignmentValidationException("employee", "MISSING_EMPLOYEE", 
+                "Employee is required");
+        }
+        
+        // Validate salary is positive if provided
+        if (assignment.getSalary() != null && assignment.getSalary().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new com.humanrsc.exceptions.AssignmentValidationException("salary", "INVALID_SALARY", 
+                "Salary must be greater than zero");
+        }
+        
         employeeAssignmentRepository.persist(assignment);
         return assignment;
     }
@@ -314,6 +564,74 @@ public class OrganizationService {
     public EmployeeAssignment updateEmployeeAssignment(EmployeeAssignment assignment) {
         return employeeAssignmentRepository.getEntityManager().merge(assignment);
     }
+    
+    @Transactional
+    public EmployeeAssignment updateEmployeeAssignmentFromDTO(String id, com.humanrsc.datamodel.dto.EmployeeAssignmentDTO dto) {
+        Optional<EmployeeAssignment> existingAssignment = employeeAssignmentRepository.findById(id);
+        if (existingAssignment.isEmpty()) {
+            throw new IllegalArgumentException("Employee assignment not found: " + id);
+        }
+        
+        EmployeeAssignment assignment = existingAssignment.get();
+        
+        // Actualizar campos del DTO
+        assignment.setStartDate(dto.getStartDate());
+        assignment.setEndDate(dto.getEndDate());
+        assignment.setSalary(dto.getSalary());
+        assignment.setCurrency(dto.getCurrency());
+        assignment.setMovementReason(dto.getMovementReason());
+        assignment.setNotes(dto.getNotes());
+        
+        // Manejar employeeId
+        if (dto.getEmployeeId() != null && !dto.getEmployeeId().trim().isEmpty()) {
+            Optional<Employee> employee = employeeRepository.findById(dto.getEmployeeId());
+            if (employee.isPresent()) {
+                assignment.setEmployee(employee.get());
+            } else {
+                throw new IllegalArgumentException("Employee not found: " + dto.getEmployeeId());
+            }
+        } else {
+            throw new IllegalArgumentException("Employee ID is required");
+        }
+        
+        // Manejar positionId
+        if (dto.getPositionId() != null && !dto.getPositionId().trim().isEmpty()) {
+            Optional<JobPosition> position = jobPositionRepository.findById(dto.getPositionId());
+            if (position.isPresent()) {
+                assignment.setPosition(position.get());
+            } else {
+                throw new IllegalArgumentException("Position not found: " + dto.getPositionId());
+            }
+        } else {
+            assignment.setPosition(null);
+        }
+        
+        // Manejar unitId
+        if (dto.getUnitId() != null && !dto.getUnitId().trim().isEmpty()) {
+            Optional<OrganizationalUnit> unit = organizationalUnitRepository.findById(dto.getUnitId());
+            if (unit.isPresent()) {
+                assignment.setUnit(unit.get());
+            } else {
+                throw new IllegalArgumentException("Unit not found: " + dto.getUnitId());
+            }
+        } else {
+            assignment.setUnit(null);
+        }
+        
+        // Manejar managerId
+        if (dto.getManagerId() != null && !dto.getManagerId().trim().isEmpty()) {
+            Optional<Employee> manager = employeeRepository.findById(dto.getManagerId());
+            if (manager.isPresent()) {
+                assignment.setManager(manager.get());
+            } else {
+                throw new IllegalArgumentException("Manager not found: " + dto.getManagerId());
+            }
+        } else {
+            assignment.setManager(null);
+        }
+        
+        return employeeAssignmentRepository.getEntityManager().merge(assignment);
+    }
 
     // ========== TEMPORARY REPLACEMENTS ==========
 
@@ -323,6 +641,38 @@ public class OrganizationService {
             String id = UUID.randomUUID().toString();
             String tenantID = ThreadLocalStorage.getTenantID();
             replacement.setObjectID(ObjectID.of(id, tenantID));
+        }
+        
+        // Validate original employee exists
+        if (replacement.getOriginalEmployee() == null) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("originalEmployee", "MISSING_ORIGINAL_EMPLOYEE", 
+                "Original employee is required");
+        }
+        
+        // Validate replacement employee exists
+        if (replacement.getReplacementEmployee() == null) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("replacementEmployee", "MISSING_REPLACEMENT_EMPLOYEE", 
+                "Replacement employee is required");
+        }
+        
+        // Validate employees are different
+        if (replacement.getOriginalEmployee().equals(replacement.getReplacementEmployee())) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("replacementEmployee", "SAME_EMPLOYEE", 
+                "Original and replacement employee cannot be the same");
+        }
+        
+        // Validate start date
+        if (replacement.getStartDate() == null) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("startDate", "MISSING_START_DATE", 
+                "Start date is required");
+        }
+        
+        // Validate end date logic
+        if (replacement.getEndDate() != null && replacement.getStartDate() != null) {
+            if (replacement.getEndDate().isBefore(replacement.getStartDate())) {
+                throw new com.humanrsc.exceptions.EmployeeValidationException("endDate", "END_DATE_BEFORE_START", 
+                    "End date cannot be before start date");
+            }
         }
         
         temporaryReplacementRepository.persist(replacement);
@@ -343,6 +693,61 @@ public class OrganizationService {
 
     @Transactional
     public TemporaryReplacement updateTemporaryReplacement(TemporaryReplacement replacement) {
+        replacement.updateTimestamp();
+        return temporaryReplacementRepository.getEntityManager().merge(replacement);
+    }
+    
+    @Transactional
+    public TemporaryReplacement updateTemporaryReplacementFromDTO(String id, com.humanrsc.datamodel.dto.TemporaryReplacementDTO dto) {
+        Optional<TemporaryReplacement> existingReplacement = temporaryReplacementRepository.findById(id);
+        if (existingReplacement.isEmpty()) {
+            throw new IllegalArgumentException("Temporary replacement not found: " + id);
+        }
+        
+        TemporaryReplacement replacement = existingReplacement.get();
+        
+        // Actualizar campos del DTO
+        replacement.setStartDate(dto.getStartDate());
+        replacement.setEndDate(dto.getEndDate());
+        replacement.setReason(dto.getReason());
+        replacement.setStatus(dto.getStatus());
+        
+        // Manejar originalEmployeeId
+        if (dto.getOriginalEmployeeId() != null && !dto.getOriginalEmployeeId().trim().isEmpty()) {
+            Optional<Employee> originalEmployee = employeeRepository.findById(dto.getOriginalEmployeeId());
+            if (originalEmployee.isPresent()) {
+                replacement.setOriginalEmployee(originalEmployee.get());
+            } else {
+                throw new IllegalArgumentException("Original employee not found: " + dto.getOriginalEmployeeId());
+            }
+        } else {
+            throw new IllegalArgumentException("Original employee ID is required");
+        }
+        
+        // Manejar replacementEmployeeId
+        if (dto.getReplacementEmployeeId() != null && !dto.getReplacementEmployeeId().trim().isEmpty()) {
+            Optional<Employee> replacementEmployee = employeeRepository.findById(dto.getReplacementEmployeeId());
+            if (replacementEmployee.isPresent()) {
+                replacement.setReplacementEmployee(replacementEmployee.get());
+            } else {
+                throw new IllegalArgumentException("Replacement employee not found: " + dto.getReplacementEmployeeId());
+            }
+        } else {
+            throw new IllegalArgumentException("Replacement employee ID is required");
+        }
+        
+        // Manejar positionId
+        if (dto.getPositionId() != null && !dto.getPositionId().trim().isEmpty()) {
+            Optional<JobPosition> position = jobPositionRepository.findById(dto.getPositionId());
+            if (position.isPresent()) {
+                replacement.setPosition(position.get());
+            } else {
+                throw new IllegalArgumentException("Position not found: " + dto.getPositionId());
+            }
+        } else {
+            replacement.setPosition(null);
+        }
+        
         replacement.updateTimestamp();
         return temporaryReplacementRepository.getEntityManager().merge(replacement);
     }
@@ -381,6 +786,30 @@ public class OrganizationService {
             salaryHistory.setObjectID(ObjectID.of(id, tenantID));
         }
         
+        // Validate employee exists
+        if (salaryHistory.getEmployee() == null) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("employee", "MISSING_EMPLOYEE", 
+                "Employee is required");
+        }
+        
+        // Validate new salary
+        if (salaryHistory.getNewSalary() == null || salaryHistory.getNewSalary().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("newSalary", "INVALID_SALARY", 
+                "New salary must be greater than zero");
+        }
+        
+        // Validate effective date
+        if (salaryHistory.getEffectiveDate() == null) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("effectiveDate", "MISSING_EFFECTIVE_DATE", 
+                "Effective date is required");
+        }
+        
+        // Validate effective date is not in the future (optional business rule)
+        if (salaryHistory.getEffectiveDate().isAfter(LocalDate.now())) {
+            throw new com.humanrsc.exceptions.EmployeeValidationException("effectiveDate", "FUTURE_EFFECTIVE_DATE", 
+                "Effective date cannot be in the future");
+        }
+        
         salaryHistoryRepository.persist(salaryHistory);
         return salaryHistory;
     }
@@ -404,6 +833,49 @@ public class OrganizationService {
     @Transactional
     public SalaryHistory updateSalaryHistory(SalaryHistory salaryHistory) {
         return salaryHistoryRepository.getEntityManager().merge(salaryHistory);
+    }
+    
+    @Transactional
+    public SalaryHistory updateSalaryHistoryFromDTO(String id, com.humanrsc.datamodel.dto.SalaryHistoryDTO dto) {
+        Optional<SalaryHistory> existingHistory = salaryHistoryRepository.findById(id);
+        if (existingHistory.isEmpty()) {
+            throw new IllegalArgumentException("Salary history not found: " + id);
+        }
+        
+        SalaryHistory history = existingHistory.get();
+        
+        // Actualizar campos del DTO
+        history.setOldSalary(dto.getOldSalary());
+        history.setNewSalary(dto.getNewSalary());
+        history.setCurrency(dto.getCurrency());
+        history.setEffectiveDate(dto.getEffectiveDate());
+        history.setReason(dto.getReason());
+        
+        // Manejar employeeId
+        if (dto.getEmployeeId() != null && !dto.getEmployeeId().trim().isEmpty()) {
+            Optional<Employee> employee = employeeRepository.findById(dto.getEmployeeId());
+            if (employee.isPresent()) {
+                history.setEmployee(employee.get());
+            } else {
+                throw new IllegalArgumentException("Employee not found: " + dto.getEmployeeId());
+            }
+        } else {
+            throw new IllegalArgumentException("Employee ID is required");
+        }
+        
+        // Manejar approvedById
+        if (dto.getApprovedById() != null && !dto.getApprovedById().trim().isEmpty()) {
+            Optional<Employee> approver = employeeRepository.findById(dto.getApprovedById());
+            if (approver.isPresent()) {
+                history.setApprovedBy(approver.get());
+            } else {
+                throw new IllegalArgumentException("Approver not found: " + dto.getApprovedById());
+            }
+        } else {
+            history.setApprovedBy(null);
+        }
+        
+        return salaryHistoryRepository.getEntityManager().merge(history);
     }
 
     // ========== BUSINESS LOGIC METHODS ==========
@@ -467,11 +939,11 @@ public class OrganizationService {
     // ========== ORGANIZATION STATISTICS ==========
 
     public OrganizationStats getOrganizationStats() {
-        long totalEmployees = employeeRepository.countTotal();
-        long activeEmployees = employeeRepository.countActive();
-        long totalUnits = organizationalUnitRepository.countActive();
-        long totalPositions = jobPositionRepository.countActive();
-        long totalCategories = positionCategoryRepository.countActive();
+        long totalEmployees = employeeRepository.count();
+        long activeEmployees = employeeRepository.count("status = ?1", Employee.STATUS_ACTIVE);
+        long totalUnits = organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
+        long totalPositions = jobPositionRepository.count("status = ?1", JobPosition.STATUS_ACTIVE);
+        long totalCategories = positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_ACTIVE);
         
         BigDecimal avgSalary = employeeRepository.getAverageSalary();
         BigDecimal maxSalary = employeeRepository.getMaxSalary();
@@ -484,16 +956,16 @@ public class OrganizationService {
     }
 
     public EmployeeStats getEmployeeStats() {
-        long totalEmployees = employeeRepository.countTotal();
-        long activeEmployees = employeeRepository.countActive();
-        long inactiveEmployees = employeeRepository.countByStatus(Employee.STATUS_INACTIVE);
-        long terminatedEmployees = employeeRepository.countByStatus(Employee.STATUS_TERMINATED);
-        long resignedEmployees = employeeRepository.countByStatus(Employee.STATUS_RESIGNED);
+        long totalEmployees = employeeRepository.count();
+        long activeEmployees = employeeRepository.count("status = ?1", Employee.STATUS_ACTIVE);
+        long inactiveEmployees = employeeRepository.count("status = ?1", Employee.STATUS_INACTIVE);
+        long terminatedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_TERMINATED);
+        long resignedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_RESIGNED);
         
-        long fullTimeEmployees = employeeRepository.countByContractType(Employee.ContractType.FULL_TIME);
-        long partTimeEmployees = employeeRepository.countByContractType(Employee.ContractType.PART_TIME);
-        long contractors = employeeRepository.countByEmployeeType(Employee.EmployeeType.CONTRACTOR);
-        long interns = employeeRepository.countByEmployeeType(Employee.EmployeeType.INTERN);
+        long fullTimeEmployees = employeeRepository.count("contractType = ?1", Employee.ContractType.FULL_TIME);
+        long partTimeEmployees = employeeRepository.count("contractType = ?1", Employee.ContractType.PART_TIME);
+        long contractors = employeeRepository.count("employeeType = ?1", Employee.EmployeeType.CONTRACTOR);
+        long interns = employeeRepository.count("employeeType = ?1", Employee.EmployeeType.INTERN);
         
         return new EmployeeStats(
             totalEmployees, activeEmployees, inactiveEmployees, terminatedEmployees, resignedEmployees,
@@ -517,15 +989,18 @@ public class OrganizationService {
     // ========== ORGANIZATIONAL LEVELS ==========
 
     public List<OrganizationalUnit> findUnitsByOrganizationalLevel(Integer level) {
-        return organizationalUnitRepository.findByOrganizationalLevel(level);
+        return organizationalUnitRepository.find("status = ?1 and organizationalLevel = ?2 order by name", 
+                   OrganizationalUnit.STATUS_ACTIVE, level).list();
     }
 
     public List<OrganizationalUnit> findUnitsByOrganizationalLevelRange(Integer minLevel, Integer maxLevel) {
-        return organizationalUnitRepository.findByOrganizationalLevelRange(minLevel, maxLevel);
+        return organizationalUnitRepository.find("status = ?1 and organizationalLevel between ?2 and ?3 order by organizationalLevel, name", 
+                   OrganizationalUnit.STATUS_ACTIVE, minLevel, maxLevel).list();
     }
 
     public long countUnitsByOrganizationalLevel(Integer level) {
-        return organizationalUnitRepository.countByOrganizationalLevel(level);
+        return organizationalUnitRepository.count("status = ?1 and organizationalLevel = ?2", 
+                    OrganizationalUnit.STATUS_ACTIVE, level);
     }
 
     private UnitWithCounts mapToUnitWithCounts(Object[] row) {
@@ -693,6 +1168,56 @@ public class OrganizationService {
 
         public List<UnitWithCounts> getUnits() { return units; }
         public List<PositionCategory> getCategories() { return categories; }
+    }
+
+    // Validation helper methods for standardized fields
+    
+    private boolean isValidGender(String gender) {
+        if (gender == null || gender.trim().isEmpty()) {
+            return true; // Gender is optional
+        }
+        return gender.equals(Employee.GENDER_MALE) ||
+               gender.equals(Employee.GENDER_FEMALE) ||
+               gender.equals(Employee.GENDER_OTHER) ||
+               gender.equals(Employee.GENDER_PREFER_NOT_TO_SAY) ||
+               gender.equals(Employee.GENDER_NON_BINARY);
+    }
+    
+    private boolean isValidCurrency(String currency) {
+        if (currency == null || currency.trim().isEmpty()) {
+            return false; // Currency is required
+        }
+        return currency.equals(Employee.CURRENCY_EUR) ||
+               currency.equals(Employee.CURRENCY_USD) ||
+               currency.equals(Employee.CURRENCY_GBP) ||
+               currency.equals(Employee.CURRENCY_JPY) ||
+               currency.equals(Employee.CURRENCY_CAD) ||
+               currency.equals(Employee.CURRENCY_AUD) ||
+               currency.equals(Employee.CURRENCY_CHF) ||
+               currency.equals(Employee.CURRENCY_CNY) ||
+               currency.equals(Employee.CURRENCY_INR) ||
+               currency.equals(Employee.CURRENCY_BRL) ||
+               currency.equals(Employee.CURRENCY_MXN) ||
+               currency.equals(Employee.CURRENCY_ARS) ||
+               currency.equals(Employee.CURRENCY_CLP) ||
+               currency.equals(Employee.CURRENCY_COP) ||
+               currency.equals(Employee.CURRENCY_PEN) ||
+               currency.equals(Employee.CURRENCY_UYU) ||
+               currency.equals(Employee.CURRENCY_VES);
+    }
+    
+    private boolean isValidOrganizationalLevel(Integer level) {
+        if (level == null) {
+            return false; // Level is required
+        }
+        return level >= OrganizationalUnit.LEVEL_1 && level <= OrganizationalUnit.LEVEL_10;
+    }
+    
+    private boolean isValidHierarchicalLevel(Integer level) {
+        if (level == null) {
+            return false; // Level is required
+        }
+        return level >= JobPosition.HIERARCHICAL_LEVEL_1 && level <= JobPosition.HIERARCHICAL_LEVEL_10;
     }
 
 

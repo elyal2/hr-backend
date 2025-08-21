@@ -21,12 +21,13 @@ public class SalaryHistory {
     @NotNull
     private ObjectID objectID;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "employee_id", referencedColumnName = "id"),
         @JoinColumn(name = "employee_tenant_id", referencedColumnName = "tenant_id")
     })
     @NotNull
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee employee;
 
     @Column(name = "old_salary", precision = 15, scale = 2)
@@ -46,11 +47,12 @@ public class SalaryHistory {
     @Column(columnDefinition = "text")
     private String reason;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "approved_by", referencedColumnName = "id"),
         @JoinColumn(name = "approved_by_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Employee approvedBy;
 
     @Column(name = "date_created", nullable = false)
@@ -94,6 +96,15 @@ public class SalaryHistory {
 
     public boolean isRecent() {
         return effectiveDate.isAfter(LocalDate.now().minusMonths(6));
+    }
+    
+    // Getters para IDs de relaciones (para serialización JSON)
+    public String getEmployeeId() {
+        return employee != null ? employee.getObjectID().getId() : null;
+    }
+    
+    public String getApprovedById() {
+        return approvedBy != null ? approvedBy.getObjectID().getId() : null;
     }
 
     @Override

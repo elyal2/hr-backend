@@ -41,6 +41,32 @@ public class Employee {
     public static final String CONTRACT_TYPE_INDEFINITE = "indefinite";
     public static final String CONTRACT_TYPE_PROJECT_BASED = "project_based";
 
+    // Gender constants - extensible for future values
+    public static final String GENDER_MALE = "male";
+    public static final String GENDER_FEMALE = "female";
+    public static final String GENDER_OTHER = "other";
+    public static final String GENDER_PREFER_NOT_TO_SAY = "prefer_not_to_say";
+    public static final String GENDER_NON_BINARY = "non_binary";
+
+    // Currency constants - extensible for future currencies
+    public static final String CURRENCY_EUR = "EUR";
+    public static final String CURRENCY_USD = "USD";
+    public static final String CURRENCY_GBP = "GBP";
+    public static final String CURRENCY_JPY = "JPY";
+    public static final String CURRENCY_CAD = "CAD";
+    public static final String CURRENCY_AUD = "AUD";
+    public static final String CURRENCY_CHF = "CHF";
+    public static final String CURRENCY_CNY = "CNY";
+    public static final String CURRENCY_INR = "INR";
+    public static final String CURRENCY_BRL = "BRL";
+    public static final String CURRENCY_MXN = "MXN";
+    public static final String CURRENCY_ARS = "ARS";
+    public static final String CURRENCY_CLP = "CLP";
+    public static final String CURRENCY_COP = "COP";
+    public static final String CURRENCY_PEN = "PEN";
+    public static final String CURRENCY_UYU = "UYU";
+    public static final String CURRENCY_VES = "VES";
+
     @EmbeddedId
     @NotNull
     private ObjectID objectID;

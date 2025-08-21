@@ -9,7 +9,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
-
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +24,18 @@ public class OrganizationalUnit {
     public static final String STATUS_INACTIVE = "inactive";
     public static final String STATUS_DELETED = "deleted";
 
+    // Organizational level constants - extensible for future levels
+    public static final int LEVEL_1 = 1;  // Executive/C-Suite
+    public static final int LEVEL_2 = 2;  // Senior Management
+    public static final int LEVEL_3 = 3;  // Middle Management
+    public static final int LEVEL_4 = 4;  // Team Lead/Supervisor
+    public static final int LEVEL_5 = 5;  // Senior Individual Contributor
+    public static final int LEVEL_6 = 6;  // Individual Contributor
+    public static final int LEVEL_7 = 7;  // Junior Individual Contributor
+    public static final int LEVEL_8 = 8;  // Entry Level
+    public static final int LEVEL_9 = 9;  // Intern/Trainee
+    public static final int LEVEL_10 = 10; // Special/Advisory
+
     @EmbeddedId
     @NotNull
     private ObjectID objectID;
@@ -36,11 +47,12 @@ public class OrganizationalUnit {
     @Column(columnDefinition = "text")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumns({
         @JoinColumn(name = "parent_unit_id", referencedColumnName = "id"),
         @JoinColumn(name = "parent_unit_tenant_id", referencedColumnName = "tenant_id")
     })
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private OrganizationalUnit parentUnit;
 
     @NotNull
@@ -139,6 +151,11 @@ public class OrganizationalUnit {
     public void deactivate() {
         this.status = STATUS_INACTIVE;
         this.dateUpdated = LocalDateTime.now();
+    }
+    
+    // Getter para parentUnitId como string (para serialización JSON)
+    public String getParentUnitId() {
+        return parentUnit != null ? parentUnit.getObjectID().getId() : null;
     }
 
     public void markAsDeleted() {
