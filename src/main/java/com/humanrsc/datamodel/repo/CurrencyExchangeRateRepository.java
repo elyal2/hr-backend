@@ -4,8 +4,6 @@ import com.humanrsc.datamodel.abstraction.ObjectID;
 import com.humanrsc.datamodel.entities.CurrencyExchangeRate;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;

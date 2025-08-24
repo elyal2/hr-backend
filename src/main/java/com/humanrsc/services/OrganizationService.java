@@ -1204,7 +1204,7 @@ public class OrganizationService {
         
         // Calculate average
         BigDecimal avgSalaryEUR = activeEmployees.isEmpty() ? BigDecimal.ZERO : 
-            totalSalaryEUR.divide(BigDecimal.valueOf(activeEmployees.size()), 2, BigDecimal.ROUND_HALF_UP);
+            totalSalaryEUR.divide(BigDecimal.valueOf(activeEmployees.size()), 2, java.math.RoundingMode.HALF_UP);
         
         // Set min salary to 0 if no employees found
         if (minSalaryEUR.compareTo(BigDecimal.valueOf(Double.MAX_VALUE)) == 0) {
@@ -1539,12 +1539,7 @@ public class OrganizationService {
                currency.equals(Employee.CURRENCY_VES);
     }
     
-    private boolean isValidOrganizationalLevel(Integer level) {
-        if (level == null) {
-            return false; // Level is required
-        }
-        return level >= OrganizationalUnit.LEVEL_1 && level <= OrganizationalUnit.LEVEL_10;
-    }
+
     
     private boolean isValidHierarchicalLevel(Integer level) {
         if (level == null) {
