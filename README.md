@@ -80,8 +80,8 @@ GET /api/organization/units/level/{level}/count
   "units": [
     {
       "id": "unit-1",
-      "name": "Recursos Humanos",
-      "description": "Departamento de RRHH",
+    "name": "Recursos Humanos",
+    "description": "Departamento de RRHH",
       "location": "Madrid",
       "parentUnitId": null,
       "employeeCount": 5,
@@ -95,7 +95,7 @@ GET /api/organization/units/level/{level}/count
       "id": "unit-2", 
       "name": "Reclutamiento",
       "description": "Subdepartamento de reclutamiento",
-      "location": "Madrid",
+    "location": "Madrid",
       "parentUnitId": "unit-1",
       "employeeCount": 2,
       "positionCount": 1,

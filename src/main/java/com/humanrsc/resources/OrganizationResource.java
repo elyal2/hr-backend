@@ -8,6 +8,7 @@ import com.humanrsc.security.JWTSecured;
 import com.humanrsc.config.ConnectionPoolIntercepted;
 import com.humanrsc.config.ConfigDefaults;
 import com.humanrsc.services.OrganizationService;
+import com.humanrsc.services.CurrencyService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -29,6 +30,9 @@ public class OrganizationResource {
 
     @Inject
     OrganizationService organizationService;
+
+    @Inject
+    CurrencyService currencyService;
 
     // ========== POSITION CATEGORIES ENDPOINTS ==========
 
@@ -477,7 +481,30 @@ public class OrganizationResource {
         if (employeeType != null) {
             try {
                 Employee.EmployeeType type = Employee.EmployeeType.valueOf(employeeType.toUpperCase());
-                filters.put("employeeType", type);
+                // Convert enum to string constant for database query
+                String employeeTypeValue;
+                switch (type) {
+                    case EMPLOYEE:
+                        employeeTypeValue = Employee.EMPLOYEE_TYPE_EMPLOYEE;
+                        break;
+                    case CONTRACTOR:
+                        employeeTypeValue = Employee.EMPLOYEE_TYPE_CONTRACTOR;
+                        break;
+                    case INTERN:
+                        employeeTypeValue = Employee.EMPLOYEE_TYPE_INTERN;
+                        break;
+                    case CONSULTANT:
+                        employeeTypeValue = Employee.EMPLOYEE_TYPE_CONSULTANT;
+                        break;
+                    case TEMPORARY:
+                        employeeTypeValue = Employee.EMPLOYEE_TYPE_TEMPORARY;
+                        break;
+                    default:
+                        return Response.status(Response.Status.BAD_REQUEST)
+                                .entity(new ErrorResponse("Invalid employee type", "Unknown employee type: " + employeeType))
+                                .build();
+                }
+                filters.put("employeeType", employeeTypeValue);
             } catch (IllegalArgumentException e) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity(new ErrorResponse("Invalid employee type", e.getMessage()))
@@ -654,9 +681,9 @@ public class OrganizationResource {
     @POST
     @Path("/assignments")
     @RolesAllowed({WRITE_ASSIGNMENTS})
-    public Response createEmployeeAssignment(EmployeeAssignment assignment) {
+    public Response createEmployeeAssignment(com.humanrsc.datamodel.dto.CreateEmployeeAssignmentDTO dto) {
         try {
-            EmployeeAssignment created = organizationService.createEmployeeAssignment(assignment);
+            EmployeeAssignment created = organizationService.createEmployeeAssignmentFromDTO(dto);
             return Response.status(Response.Status.CREATED).entity(created).build();
         } catch (com.humanrsc.exceptions.DuplicateResourceException e) {
             return Response.status(Response.Status.CONFLICT)
@@ -733,6 +760,297 @@ public class OrganizationResource {
     public Response getEmployeeStats() {
         OrganizationService.EmployeeStats stats = organizationService.getEmployeeStats();
         return Response.ok(stats).build();
+    }
+
+    // Assignment statistics
+    @GET
+    @Path("/assignments/stats")
+    @RolesAllowed({READ_ASSIGNMENTS})
+    public Response getAssignmentStats() {
+        OrganizationService.AssignmentStats stats = organizationService.getAssignmentStats();
+        return Response.ok(stats).build();
+    }
+
+    // Organization structure statistics
+    @GET
+    @Path("/units/structure-stats")
+    @RolesAllowed({READ_ORG_UNITS})
+    public Response getOrganizationStructureStats() {
+        OrganizationService.OrganizationStructureStats stats = organizationService.getOrganizationStructureStats();
+        return Response.ok(stats).build();
+    }
+
+    // ========== COUNT ENDPOINTS FOR DASHBOARD ==========
+
+    // Employee counts
+    @GET
+    @Path("/employees/count")
+    @RolesAllowed({READ_PEOPLE})
+    public Response countEmployees(@QueryParam("status") String status,
+                                 @QueryParam("active") Boolean active,
+                                 @QueryParam("inactive") Boolean inactive,
+                                 @QueryParam("terminated") Boolean terminated,
+                                 @QueryParam("resigned") Boolean resigned) {
+        long count;
+        
+        // Prioridad: filtros booleanos específicos > status general
+        if (Boolean.TRUE.equals(active)) {
+            count = organizationService.countEmployeesByStatus("active");
+        } else if (Boolean.TRUE.equals(inactive)) {
+            count = organizationService.countEmployeesByStatus("inactive");
+        } else if (Boolean.TRUE.equals(terminated)) {
+            count = organizationService.countEmployeesByStatus("terminated");
+        } else if (Boolean.TRUE.equals(resigned)) {
+            count = organizationService.countEmployeesByStatus("resigned");
+        } else if (status != null && !status.trim().isEmpty()) {
+            count = organizationService.countEmployeesByStatus(status);
+        } else {
+            count = organizationService.countEmployees();
+        }
+        
+        return Response.ok(new CountResponse(count)).build();
+    }
+
+    // Unit counts
+    @GET
+    @Path("/units/count")
+    @RolesAllowed({READ_ORG_UNITS})
+    public Response countUnits(@QueryParam("active") Boolean active,
+                             @QueryParam("inactive") Boolean inactive,
+                             @QueryParam("deleted") Boolean deleted,
+                             @QueryParam("root") Boolean root,
+                             @QueryParam("leaf") Boolean leaf,
+                             @QueryParam("withChildren") Boolean withChildren,
+                             @QueryParam("level") Integer level,
+                             @QueryParam("status") String status) {
+        long count;
+        
+        if (Boolean.TRUE.equals(root)) {
+            count = organizationService.countRootUnits();
+        } else if (Boolean.TRUE.equals(leaf)) {
+            count = organizationService.countLeafUnits();
+        } else if (Boolean.TRUE.equals(withChildren)) {
+            count = organizationService.countUnitsWithChildren();
+        } else if (level != null) {
+            count = organizationService.countUnitsByLevel(level);
+        } else if (Boolean.TRUE.equals(active)) {
+            count = organizationService.countActiveUnits();
+        } else if (Boolean.TRUE.equals(inactive)) {
+            count = organizationService.countInactiveUnits();
+        } else if (Boolean.TRUE.equals(deleted)) {
+            count = organizationService.countDeletedUnits();
+        } else if (status != null && !status.trim().isEmpty()) {
+            count = organizationService.countUnitsByStatus(status);
+        } else {
+            count = organizationService.countUnits();
+        }
+        
+        return Response.ok(new CountResponse(count)).build();
+    }
+
+    // Position counts
+    @GET
+    @Path("/positions/count")
+    @RolesAllowed({READ_POSITIONS})
+    public Response countPositions(@QueryParam("active") Boolean active,
+                                 @QueryParam("inactive") Boolean inactive,
+                                 @QueryParam("deleted") Boolean deleted,
+                                 @QueryParam("vacant") Boolean vacant,
+                                 @QueryParam("status") String status) {
+        long count;
+        
+        if (Boolean.TRUE.equals(vacant)) {
+            count = organizationService.countVacantPositions();
+        } else if (Boolean.TRUE.equals(active)) {
+            count = organizationService.countActivePositions();
+        } else if (Boolean.TRUE.equals(inactive)) {
+            count = organizationService.countInactivePositions();
+        } else if (Boolean.TRUE.equals(deleted)) {
+            count = organizationService.countDeletedPositions();
+        } else if (status != null && !status.trim().isEmpty()) {
+            count = organizationService.countPositionsByStatus(status);
+        } else {
+            count = organizationService.countPositions();
+        }
+        
+        return Response.ok(new CountResponse(count)).build();
+    }
+
+    // Category counts
+    @GET
+    @Path("/position-categories/count")
+    @RolesAllowed({READ_POSITION_CATEGORIES})
+    public Response countPositionCategories(@QueryParam("active") Boolean active,
+                                         @QueryParam("inactive") Boolean inactive,
+                                         @QueryParam("deleted") Boolean deleted,
+                                         @QueryParam("status") String status) {
+        long count;
+        
+        if (Boolean.TRUE.equals(active)) {
+            count = organizationService.countActivePositionCategories();
+        } else if (Boolean.TRUE.equals(inactive)) {
+            count = organizationService.countInactivePositionCategories();
+        } else if (Boolean.TRUE.equals(deleted)) {
+            count = organizationService.countDeletedPositionCategories();
+        } else if (status != null && !status.trim().isEmpty()) {
+            count = organizationService.countPositionCategoriesByStatus(status);
+        } else {
+            count = organizationService.countPositionCategories();
+        }
+        
+        return Response.ok(new CountResponse(count)).build();
+    }
+
+    // Assignment counts
+    @GET
+    @Path("/assignments/count")
+    @RolesAllowed({READ_ASSIGNMENTS})
+    public Response countAssignments(@QueryParam("active") Boolean active,
+                                   @QueryParam("historical") Boolean historical) {
+        long count;
+        
+        if (Boolean.TRUE.equals(active)) {
+            count = organizationService.countActiveAssignments();
+        } else if (Boolean.TRUE.equals(historical)) {
+            count = organizationService.countHistoricalAssignments();
+        } else {
+            count = organizationService.countAssignments();
+        }
+        
+        return Response.ok(new CountResponse(count)).build();
+    }
+
+    // Salary statistics
+    @GET
+    @Path("/employees/salary-stats")
+    @RolesAllowed({READ_SALARIES})
+    public Response getSalaryStats() {
+        OrganizationService.SalaryStats stats = organizationService.getSalaryStats();
+        return Response.ok(stats).build();
+    }
+
+    // ========== CURRENCY EXCHANGE RATES ENDPOINTS ==========
+
+    @POST
+    @Path("/currency-rates")
+    @RolesAllowed({WRITE_SALARIES})
+    public Response createExchangeRate(CurrencyExchangeRate rate) {
+        try {
+            CurrencyExchangeRate created = currencyService.createExchangeRate(rate);
+            return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        }
+    }
+
+    @GET
+    @Path("/currency-rates")
+    @RolesAllowed({READ_SALARIES})
+    public Response getExchangeRates(@QueryParam("fromCurrency") String fromCurrency,
+                                   @QueryParam("toCurrency") String toCurrency,
+                                   @QueryParam("date") String dateStr) {
+        try {
+            List<CurrencyExchangeRate> rates;
+            if (fromCurrency != null && toCurrency != null) {
+                if (dateStr != null) {
+                    LocalDate date = LocalDate.parse(dateStr);
+                    Optional<CurrencyExchangeRate> rate = currencyService.findValidRate(fromCurrency, toCurrency, date);
+                    rates = rate.map(List::of).orElse(List.of());
+                } else {
+                    Optional<CurrencyExchangeRate> rate = currencyService.findValidRate(fromCurrency, toCurrency);
+                    rates = rate.map(List::of).orElse(List.of());
+                }
+            } else if (fromCurrency != null) {
+                if (dateStr != null) {
+                    LocalDate date = LocalDate.parse(dateStr);
+                    rates = currencyService.findValidRates(fromCurrency, date);
+                } else {
+                    rates = currencyService.findValidRates(fromCurrency);
+                }
+            } else {
+                if (dateStr != null) {
+                    LocalDate date = LocalDate.parse(dateStr);
+                    rates = currencyService.findAllValidRates(date);
+                } else {
+                    rates = currencyService.findAllValidRates();
+                }
+            }
+            return Response.ok(rates).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Invalid parameters", e.getMessage()))
+                    .build();
+        }
+    }
+
+    @GET
+    @Path("/currency-rates/{id}")
+    @RolesAllowed({READ_SALARIES})
+    public Response getExchangeRate(@PathParam("id") String id) {
+        Optional<CurrencyExchangeRate> rate = currencyService.findById(id);
+        return rate.map(Response::ok)
+                .orElse(Response.status(Response.Status.NOT_FOUND))
+                .build();
+    }
+
+    @PUT
+    @Path("/currency-rates/{id}")
+    @RolesAllowed({WRITE_SALARIES})
+    public Response updateExchangeRate(@PathParam("id") String id, CurrencyExchangeRate rate) {
+        try {
+            CurrencyExchangeRate updated = currencyService.updateExchangeRate(id, rate);
+            return Response.ok(updated).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation error", e.getMessage()))
+                    .build();
+        }
+    }
+
+    @DELETE
+    @Path("/currency-rates/{id}")
+    @RolesAllowed({WRITE_SALARIES})
+    public Response deleteExchangeRate(@PathParam("id") String id) {
+        boolean deleted = currencyService.deleteExchangeRate(id);
+        if (deleted) {
+            return Response.ok().build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse("Not found", "Exchange rate not found"))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/currency-rates/convert")
+    @RolesAllowed({READ_SALARIES})
+    public Response convertAmount(@QueryParam("amount") String amountStr,
+                                @QueryParam("fromCurrency") String fromCurrency,
+                                @QueryParam("toCurrency") String toCurrency,
+                                @QueryParam("date") String dateStr) {
+        try {
+            BigDecimal amount = new BigDecimal(amountStr);
+            BigDecimal converted;
+            
+            if (dateStr != null) {
+                LocalDate date = LocalDate.parse(dateStr);
+                converted = currencyService.convertAmount(amount, fromCurrency, toCurrency, date);
+            } else {
+                converted = currencyService.convertAmount(amount, fromCurrency, toCurrency);
+            }
+            
+            return Response.ok(new ConversionResponse(amount, fromCurrency, converted, toCurrency)).build();
+        } catch (NumberFormatException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Invalid amount", "Amount must be a valid number"))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Conversion error", e.getMessage()))
+                    .build();
+        }
     }
 
     // ========== ORGANIZATION CHART ENDPOINTS ==========
@@ -1023,7 +1341,9 @@ public class OrganizationResource {
             this.count = count;
         }
 
-        public long getCount() { return count; }
+        public long getCount() {
+            return count;
+        }
     }
 
     public static class ErrorResponse {
@@ -1062,5 +1382,24 @@ public class OrganizationResource {
         public String getErrorCode() { return errorCode; }
         public String getField() { return field; }
         public String getDetails() { return details; }
+    }
+
+    public static class ConversionResponse {
+        private final BigDecimal originalAmount;
+        private final String fromCurrency;
+        private final BigDecimal convertedAmount;
+        private final String toCurrency;
+
+        public ConversionResponse(BigDecimal originalAmount, String fromCurrency, BigDecimal convertedAmount, String toCurrency) {
+            this.originalAmount = originalAmount;
+            this.fromCurrency = fromCurrency;
+            this.convertedAmount = convertedAmount;
+            this.toCurrency = toCurrency;
+        }
+
+        public BigDecimal getOriginalAmount() { return originalAmount; }
+        public String getFromCurrency() { return fromCurrency; }
+        public BigDecimal getConvertedAmount() { return convertedAmount; }
+        public String getToCurrency() { return toCurrency; }
     }
 }

@@ -4,15 +4,73 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 import org.jboss.logging.Logger;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Provider
 public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
     
     private static final Logger LOG = Logger.getLogger(GlobalExceptionHandler.class);
     
+    @ConfigProperty(name = "app.logging.404.level", defaultValue = "DEBUG")
+    String logLevel404;
+    
+    @ConfigProperty(name = "app.logging.validation.level", defaultValue = "INFO")
+    String logLevelValidation;
+    
+    @ConfigProperty(name = "app.logging.unexpected.level", defaultValue = "ERROR")
+    String logLevelUnexpected;
+    
+    private void logException(String level, String message, Exception exception) {
+        switch (level.toUpperCase()) {
+            case "DEBUG":
+                LOG.debugf(message, exception.getMessage());
+                break;
+            case "INFO":
+                LOG.infof(message, exception.getMessage());
+                break;
+            case "WARN":
+                LOG.warnf(message, exception.getMessage());
+                break;
+            case "ERROR":
+            default:
+                LOG.error(message, exception);
+                break;
+        }
+    }
+    
     @Override
     public Response toResponse(Exception exception) {
-        LOG.error("Unhandled exception occurred", exception);
+        // Para NotFoundException, usar configuración específica
+        if (exception instanceof jakarta.ws.rs.NotFoundException) {
+            logException(logLevel404, "Endpoint not found - Request details: %s", exception);
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse(
+                        "Endpoint not found", 
+                        "The requested endpoint does not exist. Check the URL path and HTTP method.", 
+                        "ENDPOINT_NOT_FOUND",
+                        "url",
+                        exception.getMessage()
+                    ))
+                    .build();
+        }
+        
+        // Para excepciones de validación conocidas, usar configuración específica
+        if (exception instanceof DuplicateResourceException ||
+            exception instanceof ResourceNotFoundException ||
+            exception instanceof EmployeeValidationException ||
+            exception instanceof JobPositionValidationException ||
+            exception instanceof OrganizationalUnitValidationException ||
+            exception instanceof AssignmentValidationException ||
+            exception instanceof IllegalArgumentException ||
+            exception instanceof jakarta.ws.rs.NotAllowedException ||
+            exception instanceof jakarta.ws.rs.BadRequestException ||
+            exception instanceof jakarta.validation.ConstraintViolationException) {
+            
+            logException(logLevelValidation, "Handled exception: %s - %s", exception);
+        } else {
+            // Solo usar ERROR para excepciones realmente inesperadas
+            logException(logLevelUnexpected, "Unhandled exception occurred", exception);
+        }
         
         if (exception instanceof DuplicateResourceException) {
             DuplicateResourceException e = (DuplicateResourceException) exception;
@@ -75,18 +133,6 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
                         "METHOD_NOT_ALLOWED",
                         "httpMethod",
                         allowedMethods
-                    ))
-                    .build();
-        }
-        
-        if (exception instanceof jakarta.ws.rs.NotFoundException) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponse(
-                        "Endpoint not found", 
-                        "The requested endpoint does not exist. Check the URL path.", 
-                        "ENDPOINT_NOT_FOUND",
-                        "url",
-                        null
                     ))
                     .build();
         }

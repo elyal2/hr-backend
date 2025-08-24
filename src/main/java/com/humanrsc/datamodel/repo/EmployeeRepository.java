@@ -109,6 +109,40 @@ public class EmployeeRepository implements PanacheRepositoryBase<Employee, Objec
                .orElse(java.math.BigDecimal.ZERO);
     }
 
+    public java.math.BigDecimal getTotalSalaryBudget() {
+        return find("status = ?1 and currentSalary is not null", Employee.STATUS_ACTIVE)
+               .stream()
+               .map(Employee::getCurrentSalary)
+               .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
+
+    public String getPrimaryCurrency() {
+        // Get the most common currency among active employees with salary
+        return find("status = ?1 and currentSalary is not null", Employee.STATUS_ACTIVE)
+               .stream()
+               .map(Employee::getCurrency)
+               .collect(java.util.stream.Collectors.groupingBy(
+                   currency -> currency, 
+                   java.util.stream.Collectors.counting()
+               ))
+               .entrySet()
+               .stream()
+               .max(java.util.Map.Entry.comparingByValue())
+               .map(java.util.Map.Entry::getKey)
+               .orElse("USD");
+    }
+
+    public java.util.Map<String, Long> getCurrencyDistribution() {
+        // Get distribution of currencies among active employees with salary
+        return find("status = ?1 and currentSalary is not null", Employee.STATUS_ACTIVE)
+               .stream()
+               .map(Employee::getCurrency)
+               .collect(java.util.stream.Collectors.groupingBy(
+                   currency -> currency, 
+                   java.util.stream.Collectors.counting()
+               ));
+    }
+
     // Dynamic filtering methods - RLS handles tenant filtering automatically
     
     public List<Employee> findWithFilters(java.util.Map<String, Object> filters, int page, int size) {

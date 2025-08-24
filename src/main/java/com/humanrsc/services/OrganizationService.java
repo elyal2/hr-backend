@@ -15,6 +15,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 
 
 @ApplicationScoped
@@ -27,6 +29,7 @@ public class OrganizationService {
     @Inject EmployeeAssignmentRepository employeeAssignmentRepository;
     @Inject TemporaryReplacementRepository temporaryReplacementRepository;
     @Inject SalaryHistoryRepository salaryHistoryRepository;
+    @Inject CurrencyExchangeRateRepository currencyExchangeRateRepository;
 
     // ========== POSITION CATEGORIES ==========
 
@@ -514,12 +517,65 @@ public class OrganizationService {
 
     // ========== EMPLOYEE ASSIGNMENTS ==========
 
+
+
     @Transactional
-    public EmployeeAssignment createEmployeeAssignment(EmployeeAssignment assignment) {
-        if (assignment.getObjectID() == null) {
-            String id = UUID.randomUUID().toString();
-            String tenantID = ThreadLocalStorage.getTenantID();
-            assignment.setObjectID(ObjectID.of(id, tenantID));
+    public EmployeeAssignment createEmployeeAssignmentFromDTO(com.humanrsc.datamodel.dto.CreateEmployeeAssignmentDTO dto) {
+        EmployeeAssignment assignment = new EmployeeAssignment();
+        
+        // Auto-generate ID
+        String id = UUID.randomUUID().toString();
+        String tenantID = ThreadLocalStorage.getTenantID();
+        assignment.setObjectID(ObjectID.of(id, tenantID));
+        
+        // Set basic fields
+        assignment.setStartDate(dto.getStartDate());
+        assignment.setEndDate(dto.getEndDate());
+        assignment.setSalary(dto.getSalary());
+        assignment.setCurrency(dto.getCurrency());
+        assignment.setMovementReason(dto.getMovementReason());
+        assignment.setNotes(dto.getNotes());
+        
+        // Validate and set employee
+        if (dto.getEmployeeId() == null || dto.getEmployeeId().trim().isEmpty()) {
+            throw new com.humanrsc.exceptions.AssignmentValidationException("employeeId", "MISSING_EMPLOYEE_ID", 
+                "Employee ID is required");
+        }
+        Optional<Employee> employee = employeeRepository.findById(dto.getEmployeeId());
+        if (employee.isEmpty()) {
+            throw new com.humanrsc.exceptions.AssignmentValidationException("employeeId", "EMPLOYEE_NOT_FOUND", 
+                "Employee not found: " + dto.getEmployeeId());
+        }
+        assignment.setEmployee(employee.get());
+        
+        // Validate and set position
+        if (dto.getPositionId() != null && !dto.getPositionId().trim().isEmpty()) {
+            Optional<JobPosition> position = jobPositionRepository.findById(dto.getPositionId());
+            if (position.isEmpty()) {
+                throw new com.humanrsc.exceptions.AssignmentValidationException("positionId", "POSITION_NOT_FOUND", 
+                    "Position not found: " + dto.getPositionId());
+            }
+            assignment.setPosition(position.get());
+        }
+        
+        // Validate and set unit
+        if (dto.getUnitId() != null && !dto.getUnitId().trim().isEmpty()) {
+            Optional<OrganizationalUnit> unit = organizationalUnitRepository.findById(dto.getUnitId());
+            if (unit.isEmpty()) {
+                throw new com.humanrsc.exceptions.AssignmentValidationException("unitId", "UNIT_NOT_FOUND", 
+                    "Unit not found: " + dto.getUnitId());
+            }
+            assignment.setUnit(unit.get());
+        }
+        
+        // Validate and set manager
+        if (dto.getManagerId() != null && !dto.getManagerId().trim().isEmpty()) {
+            Optional<Employee> manager = employeeRepository.findById(dto.getManagerId());
+            if (manager.isEmpty()) {
+                throw new com.humanrsc.exceptions.AssignmentValidationException("managerId", "MANAGER_NOT_FOUND", 
+                "Manager not found: " + dto.getManagerId());
+            }
+            assignment.setManager(manager.get());
         }
         
         // Validate start date
@@ -534,12 +590,6 @@ public class OrganizationService {
                 throw new com.humanrsc.exceptions.AssignmentValidationException("endDate", "END_DATE_BEFORE_START", 
                     "End date cannot be before start date");
             }
-        }
-        
-        // Validate employee exists
-        if (assignment.getEmployee() == null) {
-            throw new com.humanrsc.exceptions.AssignmentValidationException("employee", "MISSING_EMPLOYEE", 
-                "Employee is required");
         }
         
         // Validate salary is positive if provided
@@ -955,6 +1005,215 @@ public class OrganizationService {
         );
     }
 
+    // ========== COUNT METHODS FOR DASHBOARD ==========
+
+    // Employee counts
+    public long countEmployees() {
+        return employeeRepository.count();
+    }
+
+    public long countEmployeesByStatus(String status) {
+        return employeeRepository.count("status = ?1", status);
+    }
+
+    // Unit counts
+    public long countUnits() {
+        return organizationalUnitRepository.count();
+    }
+
+    public long countActiveUnits() {
+        return organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
+    }
+
+    public long countInactiveUnits() {
+        return organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_INACTIVE);
+    }
+
+    public long countDeletedUnits() {
+        return organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_DELETED);
+    }
+
+    public long countUnitsByStatus(String status) {
+        return organizationalUnitRepository.count("status = ?1", status);
+    }
+
+    public long countRootUnits() {
+        return organizationalUnitRepository.count("status = ?1 and parentUnit is null", OrganizationalUnit.STATUS_ACTIVE);
+    }
+
+    public long countUnitsByLevel(Integer level) {
+        return organizationalUnitRepository.count("status = ?1 and organizationalLevel = ?2", 
+            OrganizationalUnit.STATUS_ACTIVE, level);
+    }
+
+    public long countUnitsWithChildren() {
+        return organizationalUnitRepository.count("status = ?1 and objectID in " +
+            "(select distinct ou.parentUnit.objectID from OrganizationalUnit ou where ou.parentUnit is not null)", 
+            OrganizationalUnit.STATUS_ACTIVE);
+    }
+
+    public long countLeafUnits() {
+        return organizationalUnitRepository.count("status = ?1 and objectID not in " +
+            "(select distinct ou.parentUnit.objectID from OrganizationalUnit ou where ou.parentUnit is not null)", 
+            OrganizationalUnit.STATUS_ACTIVE);
+    }
+
+    // Organizational statistics
+    public OrganizationStructureStats getOrganizationStructureStats() {
+        long totalUnits = organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
+        long rootUnits = countRootUnits();
+        long unitsWithChildren = countUnitsWithChildren();
+        long leafUnits = countLeafUnits();
+        
+        // Count by levels (1-10)
+        Map<Integer, Long> unitsByLevel = new HashMap<>();
+        for (int level = 1; level <= 10; level++) {
+            long count = countUnitsByLevel(level);
+            if (count > 0) {
+                unitsByLevel.put(level, count);
+            }
+        }
+        
+        // Find max level used (highest in hierarchy - level 1 is root)
+        int maxLevel = unitsByLevel.keySet().stream()
+            .mapToInt(Integer::intValue)
+            .min()
+            .orElse(0);
+        
+        // Find min level used (lowest in hierarchy - deepest level)
+        int minLevel = unitsByLevel.keySet().stream()
+            .mapToInt(Integer::intValue)
+            .max()
+            .orElse(0);
+        
+        return new OrganizationStructureStats(
+            totalUnits, rootUnits, unitsWithChildren, leafUnits, 
+            maxLevel, minLevel, unitsByLevel
+        );
+    }
+
+    // Position counts
+    public long countPositions() {
+        return jobPositionRepository.count();
+    }
+
+    public long countActivePositions() {
+        return jobPositionRepository.count("status = ?1", JobPosition.STATUS_ACTIVE);
+    }
+
+    public long countInactivePositions() {
+        return jobPositionRepository.count("status = ?1", JobPosition.STATUS_INACTIVE);
+    }
+
+    public long countDeletedPositions() {
+        return jobPositionRepository.count("status = ?1", JobPosition.STATUS_DELETED);
+    }
+
+    public long countPositionsByStatus(String status) {
+        return jobPositionRepository.count("status = ?1", status);
+    }
+
+    public long countVacantPositions() {
+        return jobPositionRepository.count("status = ?1 and objectID not in " +
+                   "(select ea.position.objectID from EmployeeAssignment ea " +
+                   "where ea.endDate is null)", 
+                   JobPosition.STATUS_ACTIVE);
+    }
+
+    // Category counts
+    public long countPositionCategories() {
+        return positionCategoryRepository.count();
+    }
+
+    public long countActivePositionCategories() {
+        return positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_ACTIVE);
+    }
+
+    public long countInactivePositionCategories() {
+        return positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_INACTIVE);
+    }
+
+    public long countDeletedPositionCategories() {
+        return positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_DELETED);
+    }
+
+    public long countPositionCategoriesByStatus(String status) {
+        return positionCategoryRepository.count("status = ?1", status);
+    }
+
+    // Assignment counts
+    public long countAssignments() {
+        return employeeAssignmentRepository.count();
+    }
+
+    public long countActiveAssignments() {
+        return employeeAssignmentRepository.count("endDate is null");
+    }
+
+    public long countHistoricalAssignments() {
+        return employeeAssignmentRepository.count("endDate is not null");
+    }
+
+    // Assignment statistics
+    public AssignmentStats getAssignmentStats() {
+        long totalEmployees = employeeRepository.count("status = ?1", Employee.STATUS_ACTIVE);
+        long activeAssignments = employeeAssignmentRepository.count("endDate is null");
+        long employeesWithAssignments = employeeRepository.count("status = ?1 and objectID in " +
+            "(select distinct ea.employee.objectID from EmployeeAssignment ea where ea.endDate is null)", 
+            Employee.STATUS_ACTIVE);
+        
+        double assignmentPercentage = totalEmployees > 0 ? 
+            (double) employeesWithAssignments / totalEmployees * 100 : 0.0;
+        
+        return new AssignmentStats(activeAssignments, employeesWithAssignments, totalEmployees, assignmentPercentage);
+    }
+
+    // Salary statistics
+    public SalaryStats getSalaryStats() {
+        // Get all active employees with salary
+        List<Employee> activeEmployees = employeeRepository.find("status = ?1 and currentSalary is not null", Employee.STATUS_ACTIVE).list();
+        
+        BigDecimal totalBudgetEUR = BigDecimal.ZERO;
+        BigDecimal totalSalaryEUR = BigDecimal.ZERO;
+        BigDecimal maxSalaryEUR = BigDecimal.ZERO;
+        BigDecimal minSalaryEUR = BigDecimal.valueOf(Double.MAX_VALUE);
+        Map<String, Long> currencyDistribution = new HashMap<>();
+        
+        for (Employee employee : activeEmployees) {
+            BigDecimal salary = employee.getCurrentSalary();
+            String currency = employee.getCurrency();
+            
+            // Count currency distribution
+            currencyDistribution.merge(currency, 1L, Long::sum);
+            
+            // Convert to EUR for calculations
+            BigDecimal salaryEUR = currencyExchangeRateRepository.convertAmount(salary, currency, "EUR");
+            
+            totalSalaryEUR = totalSalaryEUR.add(salaryEUR);
+            
+            if (salaryEUR.compareTo(maxSalaryEUR) > 0) {
+                maxSalaryEUR = salaryEUR;
+            }
+            
+            if (salaryEUR.compareTo(minSalaryEUR) < 0) {
+                minSalaryEUR = salaryEUR;
+            }
+        }
+        
+        totalBudgetEUR = totalSalaryEUR;
+        
+        // Calculate average
+        BigDecimal avgSalaryEUR = activeEmployees.isEmpty() ? BigDecimal.ZERO : 
+            totalSalaryEUR.divide(BigDecimal.valueOf(activeEmployees.size()), 2, BigDecimal.ROUND_HALF_UP);
+        
+        // Set min salary to 0 if no employees found
+        if (minSalaryEUR.compareTo(BigDecimal.valueOf(Double.MAX_VALUE)) == 0) {
+            minSalaryEUR = BigDecimal.ZERO;
+        }
+        
+        return new SalaryStats(totalBudgetEUR, avgSalaryEUR, maxSalaryEUR, minSalaryEUR, "EUR", currencyDistribution);
+    }
+
     public EmployeeStats getEmployeeStats() {
         long totalEmployees = employeeRepository.count();
         long activeEmployees = employeeRepository.count("status = ?1", Employee.STATUS_ACTIVE);
@@ -962,10 +1221,10 @@ public class OrganizationService {
         long terminatedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_TERMINATED);
         long resignedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_RESIGNED);
         
-        long fullTimeEmployees = employeeRepository.count("contractType = ?1", Employee.ContractType.FULL_TIME);
-        long partTimeEmployees = employeeRepository.count("contractType = ?1", Employee.ContractType.PART_TIME);
-        long contractors = employeeRepository.count("employeeType = ?1", Employee.EmployeeType.CONTRACTOR);
-        long interns = employeeRepository.count("employeeType = ?1", Employee.EmployeeType.INTERN);
+        long fullTimeEmployees = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_FULL_TIME);
+        long partTimeEmployees = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_PART_TIME);
+        long contractors = employeeRepository.count("employeeType = ?1", Employee.EMPLOYEE_TYPE_CONTRACTOR);
+        long interns = employeeRepository.count("employeeType = ?1", Employee.EMPLOYEE_TYPE_INTERN);
         
         return new EmployeeStats(
             totalEmployees, activeEmployees, inactiveEmployees, terminatedEmployees, resignedEmployees,
@@ -1101,7 +1360,81 @@ public class OrganizationService {
         public long getInterns() { return interns; }
     }
 
+    public static class SalaryStats {
+        private final BigDecimal totalBudget;
+        private final BigDecimal avgSalary;
+        private final BigDecimal maxSalary;
+        private final BigDecimal minSalary;
+        private final String primaryCurrency;
+        private final Map<String, Long> currencyDistribution;
 
+        public SalaryStats(BigDecimal totalBudget, BigDecimal avgSalary, BigDecimal maxSalary, BigDecimal minSalary, 
+                          String primaryCurrency, Map<String, Long> currencyDistribution) {
+            this.totalBudget = totalBudget;
+            this.avgSalary = avgSalary;
+            this.maxSalary = maxSalary;
+            this.minSalary = minSalary;
+            this.primaryCurrency = primaryCurrency;
+            this.currencyDistribution = currencyDistribution;
+        }
+
+        // Getters
+        public BigDecimal getTotalBudget() { return totalBudget; }
+        public BigDecimal getAvgSalary() { return avgSalary; }
+        public BigDecimal getMaxSalary() { return maxSalary; }
+        public BigDecimal getMinSalary() { return minSalary; }
+        public String getPrimaryCurrency() { return primaryCurrency; }
+        public Map<String, Long> getCurrencyDistribution() { return currencyDistribution; }
+    }
+
+    public static class AssignmentStats {
+        private final long activeAssignments;
+        private final long employeesWithAssignments;
+        private final long totalEmployees;
+        private final double assignmentPercentage;
+
+        public AssignmentStats(long activeAssignments, long employeesWithAssignments, long totalEmployees, double assignmentPercentage) {
+            this.activeAssignments = activeAssignments;
+            this.employeesWithAssignments = employeesWithAssignments;
+            this.totalEmployees = totalEmployees;
+            this.assignmentPercentage = assignmentPercentage;
+        }
+
+        // Getters
+        public long getActiveAssignments() { return activeAssignments; }
+        public long getEmployeesWithAssignments() { return employeesWithAssignments; }
+        public long getTotalEmployees() { return totalEmployees; }
+        public double getAssignmentPercentage() { return assignmentPercentage; }
+    }
+
+    public static class OrganizationStructureStats {
+        private final long totalUnits;
+        private final long rootUnits;
+        private final long unitsWithChildren;
+        private final long leafUnits;
+        private final int maxLevel;
+        private final int minLevel;
+        private final Map<Integer, Long> unitsByLevel;
+
+        public OrganizationStructureStats(long totalUnits, long rootUnits, long unitsWithChildren, long leafUnits, int maxLevel, int minLevel, Map<Integer, Long> unitsByLevel) {
+            this.totalUnits = totalUnits;
+            this.rootUnits = rootUnits;
+            this.unitsWithChildren = unitsWithChildren;
+            this.leafUnits = leafUnits;
+            this.maxLevel = maxLevel;
+            this.minLevel = minLevel;
+            this.unitsByLevel = unitsByLevel;
+        }
+
+        // Getters
+        public long getTotalUnits() { return totalUnits; }
+        public long getRootUnits() { return rootUnits; }
+        public long getUnitsWithChildren() { return unitsWithChildren; }
+        public long getLeafUnits() { return leafUnits; }
+        public int getMaxLevel() { return maxLevel; }
+        public int getMinLevel() { return minLevel; }
+        public Map<Integer, Long> getUnitsByLevel() { return unitsByLevel; }
+    }
 
     public static class UnitWithCounts {
         private final String id;
