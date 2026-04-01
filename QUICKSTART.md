@@ -15,13 +15,21 @@ Copia el archivo de ejemplo y edita las credenciales:
 cp .env.example .env
 ```
 
-Edita `.env` y reemplaza `YOUR_CLIENT_SECRET_HERE` con tu Client Secret de Auth0:
+Edita `.env` y configura las siguientes variables:
 
-**Para obtener el Client Secret:**
+**1. POSTGRES_PASSWORD** (requerido):
+```bash
+POSTGRES_PASSWORD=your-secure-password-here  # Elige una contraseña fuerte
+```
+
+**2. AUTH0_CLIENT_SECRET** (requerido):
 1. Ve a [Auth0 Dashboard](https://manage.auth0.com/dashboard/)
 2. Navega a: **Applications** → **HumanRSC API (Server Application M2M)**
 3. Copia el **Client Secret**
-4. Pégalo en el archivo `.env` en la línea `AUTH0_CLIENT_SECRET`
+4. Pégalo en el archivo `.env`:
+```bash
+AUTH0_CLIENT_SECRET=your-auth0-client-secret-here
+```
 
 ### 2. Inicia los servicios
 
@@ -57,7 +65,7 @@ Una vez que los servicios estén corriendo:
 - **API Base:** http://localhost:8080
 - **Health Check:** http://localhost:8080/q/health
 - **Swagger UI:** http://localhost:8080/q/swagger-ui
-- **PostgreSQL:** localhost:5432 (usuario: `postgres`, password: `c0c0L0C0`)
+- **PostgreSQL:** localhost:5432 (usuario: `postgres`, password: el que configuraste en `.env`)
 
 ## Comandos Útiles
 
