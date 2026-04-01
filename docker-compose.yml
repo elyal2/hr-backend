@@ -1,24 +1,70 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: hr-postgres-dev
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: humanrsc
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-humanrsc}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-c0c0L0C0}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d humanrsc"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-humanrsc}"]
       interval: 10s
       timeout: 5s
       retries: 3
     networks:
       - hr-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hr-backend-dev
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    environment:
+      # Database configuration (usa variables del .env)
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-humanrsc}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-c0c0L0C0}
+      
+      # Auth0 configuration
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-https://api.humanrsc.com}
+      
+      # CORS configuration
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      
+      # Application configuration
+      DEFAULT_TENANT: ${DEFAULT_TENANT:-demo-tenant}
+      
+      # Quarkus runtime configuration
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      QUARKUS_LOG_CONSOLE_JSON: ${LOG_JSON:-false}
+      QUARKUS_PROFILE: ${QUARKUS_PROFILE:-dev}
+      
+      # JVM options para contenedor
+      JAVA_OPTS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/q/health/live"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    networks:
+      - hr-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

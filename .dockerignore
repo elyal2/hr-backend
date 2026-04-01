@@ -1,5 +1,12 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+# Ignora archivos innecesarios para el build de Docker
+.git
+.github
+.settings
+.vscode
+.idea
+*.md
+target
+.env
+.env.*
+*.log
+.DS_Store
