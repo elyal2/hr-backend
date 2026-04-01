@@ -72,11 +72,17 @@ public class SalaryHistoryRepository implements PanacheRepositoryBase<SalaryHist
                    tenantID, "%" + reason + "%").list();
     }
 
-    public List<SalaryHistory> findRecentChanges() {
+    public List<SalaryHistory> findRecentChanges(LocalDate startDate, LocalDate endDate, Integer limit) {
         String tenantID = getCurrentTenantID();
-        LocalDate sixMonthsAgo = LocalDate.now().minusMonths(6);
-        return find("objectID.tenantID = ?1 and effectiveDate >= ?2 order by effectiveDate desc", 
-                   tenantID, sixMonthsAgo).list();
+        
+        var query = find("objectID.tenantID = ?1 and effectiveDate >= ?2 and effectiveDate <= ?3 order by effectiveDate desc", 
+                   tenantID, startDate, endDate);
+        
+        if (limit != null && limit > 0) {
+            return query.range(0, limit - 1).list();
+        }
+        
+        return query.list();
     }
 
     // Pagination methods

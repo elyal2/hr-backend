@@ -30,6 +30,7 @@ public class OrganizationService {
     @Inject TemporaryReplacementRepository temporaryReplacementRepository;
     @Inject SalaryHistoryRepository salaryHistoryRepository;
     @Inject CurrencyExchangeRateRepository currencyExchangeRateRepository;
+    @Inject NotificationService notificationService;
 
     // ========== POSITION CATEGORIES ==========
 
@@ -447,6 +448,10 @@ public class OrganizationService {
         }
         
         employeeRepository.persist(employee);
+        
+        // Create notification for manager (or HR managers if no manager assigned)
+        createEmployeeHiredNotification(employee);
+        
         return employee;
     }
 
@@ -501,7 +506,11 @@ public class OrganizationService {
     public boolean terminateEmployee(String id, LocalDate terminationDate) {
         Optional<Employee> employee = employeeRepository.findById(id);
         if (employee.isPresent()) {
-            return employeeRepository.terminateEmployee(employee.get().getObjectID(), terminationDate);
+            boolean result = employeeRepository.terminateEmployee(employee.get().getObjectID(), terminationDate);
+            if (result) {
+                createEmployeeTerminatedNotification(employee.get());
+            }
+            return result;
         }
         return false;
     }
@@ -510,7 +519,11 @@ public class OrganizationService {
     public boolean resignEmployee(String id, LocalDate resignationDate) {
         Optional<Employee> employee = employeeRepository.findById(id);
         if (employee.isPresent()) {
-            return employeeRepository.resignEmployee(employee.get().getObjectID(), resignationDate);
+            boolean result = employeeRepository.resignEmployee(employee.get().getObjectID(), resignationDate);
+            if (result) {
+                createEmployeeTerminatedNotification(employee.get()); // Same notification type for resign
+            }
+            return result;
         }
         return false;
     }
@@ -726,6 +739,10 @@ public class OrganizationService {
         }
         
         temporaryReplacementRepository.persist(replacement);
+        
+        // Create notification for replacement start
+        createReplacementStartedNotification(replacement);
+        
         return replacement;
     }
 
@@ -809,6 +826,10 @@ public class OrganizationService {
             replacement.get().complete();
             replacement.get().updateTimestamp();
             temporaryReplacementRepository.getEntityManager().merge(replacement.get());
+            
+            // Create notification for replacement completion
+            createReplacementCompletedNotification(replacement.get());
+            
             return true;
         }
         return false;
@@ -868,8 +889,25 @@ public class OrganizationService {
         return salaryHistoryRepository.findByEmployee(employeeId);
     }
 
-    public List<SalaryHistory> findRecentSalaryChanges() {
-        return salaryHistoryRepository.findRecentChanges();
+    public List<SalaryHistory> findRecentSalaryChanges(
+            Optional<Integer> months,
+            Optional<String> startDateStr,
+            Optional<String> endDateStr,
+            Integer limit) {
+        
+        // Default: last 6 months if no parameters provided
+        int monthsBack = months.orElse(6);
+        
+        // Parse dates if provided
+        LocalDate startDate = startDateStr
+                .map(LocalDate::parse)
+                .orElseGet(() -> LocalDate.now().minusMonths(monthsBack));
+        
+        LocalDate endDate = endDateStr
+                .map(LocalDate::parse)
+                .orElse(LocalDate.now());
+        
+        return salaryHistoryRepository.findRecentChanges(startDate, endDate, limit);
     }
 
     public List<SalaryHistory> findSalaryIncreases() {
@@ -956,6 +994,9 @@ public class OrganizationService {
             emp.setCurrentSalary(newSalary);
             emp.updateTimestamp();
             employeeRepository.getEntityManager().merge(emp);
+            
+            // Create notification for salary change
+            createSalaryChangedNotification(emp, oldSalary, newSalary);
         }
     }
 
@@ -1546,6 +1587,163 @@ public class OrganizationService {
             return false; // Level is required
         }
         return level >= JobPosition.HIERARCHICAL_LEVEL_1 && level <= JobPosition.HIERARCHICAL_LEVEL_10;
+    }
+
+    // ========== NOTIFICATION HELPERS ==========
+    
+    /**
+     * Create notification when an employee is hired
+     */
+    private void createEmployeeHiredNotification(Employee employee) {
+        try {
+            String managerId = getManagerIdForEmployee(employee);
+            if (managerId != null) {
+                String title = "New Employee Hired";
+                String message = String.format("Employee %s %s (ID: %s) has been hired", 
+                    employee.getFirstName(), employee.getLastName(), employee.getEmployeeId());
+                
+                notificationService.createNotification(
+                    managerId,
+                    com.humanrsc.datamodel.enums.NotificationType.EMPLOYEE_HIRED,
+                    title,
+                    message,
+                    "Employee",
+                    employee.getObjectID().getId()
+                );
+            }
+        } catch (Exception e) {
+            // Log error but don't fail the main operation
+            System.err.println("Failed to create employee hired notification: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create notification when an employee is terminated or resigned
+     */
+    private void createEmployeeTerminatedNotification(Employee employee) {
+        try {
+            String managerId = getManagerIdForEmployee(employee);
+            if (managerId != null) {
+                String title = "Employee Terminated";
+                String message = String.format("Employee %s %s (ID: %s) has been terminated/resigned", 
+                    employee.getFirstName(), employee.getLastName(), employee.getEmployeeId());
+                
+                notificationService.createNotification(
+                    managerId,
+                    com.humanrsc.datamodel.enums.NotificationType.EMPLOYEE_TERMINATED,
+                    title,
+                    message,
+                    "Employee",
+                    employee.getObjectID().getId()
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to create employee terminated notification: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create notification when an employee's salary is changed
+     */
+    private void createSalaryChangedNotification(Employee employee, BigDecimal oldSalary, BigDecimal newSalary) {
+        try {
+            String managerId = getManagerIdForEmployee(employee);
+            if (managerId != null) {
+                String title = "Salary Changed";
+                String message = String.format("Employee %s %s salary changed from %s to %s %s", 
+                    employee.getFirstName(), employee.getLastName(), 
+                    oldSalary, newSalary, employee.getCurrency());
+                
+                notificationService.createNotification(
+                    managerId,
+                    com.humanrsc.datamodel.enums.NotificationType.SALARY_CHANGED,
+                    title,
+                    message,
+                    "Employee",
+                    employee.getObjectID().getId()
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to create salary changed notification: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create notification when a temporary replacement starts
+     */
+    private void createReplacementStartedNotification(TemporaryReplacement replacement) {
+        try {
+            Employee originalEmployee = replacement.getOriginalEmployee();
+            Employee replacementEmployee = replacement.getReplacementEmployee();
+            
+            String managerId = getManagerIdForEmployee(originalEmployee);
+            if (managerId != null) {
+                String title = "Temporary Replacement Started";
+                String message = String.format("Temporary replacement: %s %s replacing %s %s", 
+                    replacementEmployee.getFirstName(), replacementEmployee.getLastName(),
+                    originalEmployee.getFirstName(), originalEmployee.getLastName());
+                
+                notificationService.createNotification(
+                    managerId,
+                    com.humanrsc.datamodel.enums.NotificationType.REPLACEMENT_STARTED,
+                    title,
+                    message,
+                    "TemporaryReplacement",
+                    replacement.getObjectID().getId()
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to create replacement started notification: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create notification when a temporary replacement is completed
+     */
+    private void createReplacementCompletedNotification(TemporaryReplacement replacement) {
+        try {
+            Employee originalEmployee = replacement.getOriginalEmployee();
+            Employee replacementEmployee = replacement.getReplacementEmployee();
+            
+            String managerId = getManagerIdForEmployee(originalEmployee);
+            if (managerId != null) {
+                String title = "Temporary Replacement Completed";
+                String message = String.format("Temporary replacement completed: %s %s was replacing %s %s", 
+                    replacementEmployee.getFirstName(), replacementEmployee.getLastName(),
+                    originalEmployee.getFirstName(), originalEmployee.getLastName());
+                
+                notificationService.createNotification(
+                    managerId,
+                    com.humanrsc.datamodel.enums.NotificationType.REPLACEMENT_COMPLETED,
+                    title,
+                    message,
+                    "TemporaryReplacement",
+                    replacement.getObjectID().getId()
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to create replacement completed notification: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get the manager ID for an employee, or return a default HR manager if none assigned
+     * Returns the userId from the manager's current assignment, or null if none found
+     */
+    private String getManagerIdForEmployee(Employee employee) {
+        // Try to find the employee's current assignment and get the manager
+        List<EmployeeAssignment> assignments = employeeAssignmentRepository.findByEmployee(employee.getObjectID().getId());
+        for (EmployeeAssignment assignment : assignments) {
+            if (assignment.isCurrent() && assignment.getManager() != null) {
+                // Return the manager's user ID (assuming it matches employee ID for now)
+                // TODO: In a real implementation, you would map employee to Auth0 user ID
+                return assignment.getManager().getObjectID().getId();
+            }
+        }
+        
+        // If no manager found, could return a default HR manager user ID here
+        // For now, return null to skip notification if no manager assigned
+        return null;
     }
 
 

@@ -1221,8 +1221,16 @@ public class OrganizationResource {
     @GET
     @Path("/salary-history/recent")
     @RolesAllowed({READ_SALARIES})
-    public Response getRecentSalaryChanges() {
-        List<SalaryHistory> salaryHistory = organizationService.findRecentSalaryChanges();
+    public Response getRecentSalaryChanges(
+            @QueryParam("months") Integer months,
+            @QueryParam("startDate") String startDate,
+            @QueryParam("endDate") String endDate,
+            @QueryParam("limit") Integer limit) {
+        List<SalaryHistory> salaryHistory = organizationService.findRecentSalaryChanges(
+                Optional.ofNullable(months),
+                Optional.ofNullable(startDate),
+                Optional.ofNullable(endDate),
+                limit);
         return Response.ok(salaryHistory).build();
     }
 
