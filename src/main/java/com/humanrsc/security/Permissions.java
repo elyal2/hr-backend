@@ -49,6 +49,7 @@ public final class Permissions {
     public static final String IMPORT_DATA = "import:data";
     public static final String EXPORT_DATA = "export:data";
     public static final String NOTIFY_SEND = "notify:send";
+    public static final String NOTIFICATIONS_READ = "notifications:read";
 
     public static final String STATS_READ = "stats:read"; // tenant-level stats
     public static final String STATS_READ_GLOBAL = "stats:read:global"; // platform-level
