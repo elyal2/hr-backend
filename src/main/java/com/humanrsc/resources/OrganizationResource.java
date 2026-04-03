@@ -460,6 +460,7 @@ public class OrganizationResource {
                                    @QueryParam("gender") String gender,
                                    @QueryParam("currency") String currency,
                                    @QueryParam("terminated") Boolean terminated,
+                                   @QueryParam("organizationalLevel") Integer organizationalLevel,
                                    // Dynamic filters for any employee field
                                    @QueryParam("nationalId") String nationalId,
                                    @QueryParam("firstName") String firstName,
@@ -578,6 +579,11 @@ public class OrganizationResource {
             }
         }
         // If terminated is null, no status filter is applied (returns all employees)
+        
+        // Handle organizationalLevel filter (filters employees by their unit's organizational level)
+        if (organizationalLevel != null) {
+            filters.put("organizationalLevel", organizationalLevel);
+        }
         
         int pageNum = page != null ? page : ConfigDefaults.DEFAULT_PAGE;
         int pageSize = size != null ? size : ConfigDefaults.DEFAULT_SIZE;
@@ -798,10 +804,11 @@ public class OrganizationResource {
                                  @QueryParam("active") Boolean active,
                                  @QueryParam("inactive") Boolean inactive,
                                  @QueryParam("terminated") Boolean terminated,
-                                 @QueryParam("resigned") Boolean resigned) {
+                                 @QueryParam("resigned") Boolean resigned,
+                                 @QueryParam("organizationalLevel") Integer organizationalLevel) {
         long count;
         
-        // Prioridad: filtros booleanos específicos > status general
+        // Prioridad: filtros booleanos específicos > status general > organizationalLevel
         if (Boolean.TRUE.equals(active)) {
             count = organizationService.countEmployeesByStatus("active");
         } else if (Boolean.TRUE.equals(inactive)) {
@@ -812,6 +819,10 @@ public class OrganizationResource {
             count = organizationService.countEmployeesByStatus("resigned");
         } else if (status != null && !status.trim().isEmpty()) {
             count = organizationService.countEmployeesByStatus(status);
+        } else if (organizationalLevel != null) {
+            java.util.Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("organizationalLevel", organizationalLevel);
+            count = organizationService.countEmployeesWithFilters(filters);
         } else {
             count = organizationService.countEmployees();
         }

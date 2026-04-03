@@ -178,10 +178,26 @@ public class EmployeeRepository implements PanacheRepositoryBase<Employee, Objec
             "firstName", "lastName", "email", "nationalId", "employeeId"
         );
         
+        // Handle organizationalLevel specially (requires JOIN through EmployeeAssignment)
+        Integer orgLevel = (Integer) filters.get("organizationalLevel");
+        if (orgLevel != null) {
+            if (!firstCondition) {
+                queryBuilder.append(" and ");
+            }
+            firstCondition = false;
+            queryBuilder.append("objectID in (select ea.employee.objectID from EmployeeAssignment ea where ea.unit.organizationalLevel = ?").append(parameters.size() + 1).append(" and ea.endDate is null)");
+            parameters.add(orgLevel);
+        }
+        
         // Add filters dynamically
         for (java.util.Map.Entry<String, Object> entry : filters.entrySet()) {
             String field = entry.getKey();
             Object value = entry.getValue();
+            
+            // Skip organizationalLevel as it's handled above
+            if ("organizationalLevel".equals(field)) {
+                continue;
+            }
             
             if (value != null) {
                 if (!firstCondition) {

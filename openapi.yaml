@@ -1,13 +1,128 @@
 ---
 openapi: 3.1.0
 paths:
+  /api/notifications:
+    get:
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get All Notifications
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
+  /api/notifications/read-all:
+    put:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Mark All As Read
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
+  /api/notifications/unread:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Unread Notifications
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
+  /api/notifications/unread/count:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Unread Count
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
+  /api/notifications/{id}:
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Notification By Id
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
+  /api/notifications/{id}/read:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Mark As Read
+      tags:
+      - Notification Resource
+      security:
+      - SecurityScheme:
+        - notifications:read
   /api/organization/assignments:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EmployeeAssignment"
+              $ref: "#/components/schemas/CreateEmployeeAssignmentDTO"
         required: true
       responses:
         "200":
@@ -24,6 +139,30 @@ paths:
       security:
       - SecurityScheme:
         - write:assignments
+  /api/organization/assignments/count:
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      - name: historical
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Count Assignments
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:assignments
   /api/organization/assignments/employee/{employeeId}:
     get:
       parameters:
@@ -66,6 +205,21 @@ paths:
       security:
       - SecurityScheme:
         - read:assignments
+  /api/organization/assignments/stats:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Assignment Stats
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:assignments
   /api/organization/assignments/{id}:
     put:
       parameters:
@@ -78,7 +232,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EmployeeAssignment"
+              $ref: "#/components/schemas/EmployeeAssignmentDTO"
         required: true
       responses:
         "200":
@@ -111,9 +265,205 @@ paths:
       - SecurityScheme:
         - read:org-units
         - read:people
+  /api/organization/currency-rates:
+    get:
+      parameters:
+      - name: date
+        in: query
+        schema:
+          type: string
+      - name: fromCurrency
+        in: query
+        schema:
+          type: string
+      - name: toCurrency
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Exchange Rates
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurrencyExchangeRate"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Create Exchange Rate
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
+  /api/organization/currency-rates/convert:
+    post:
+      parameters:
+      - name: amount
+        in: query
+        schema:
+          type: string
+      - name: date
+        in: query
+        schema:
+          type: string
+      - name: fromCurrency
+        in: query
+        schema:
+          type: string
+      - name: toCurrency
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Convert Amount
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+  /api/organization/currency-rates/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurrencyExchangeRate"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Exchange Rate
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Exchange Rate
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Delete Exchange Rate
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
   /api/organization/employees:
     get:
       parameters:
+      - name: contractType
+        in: query
+        schema:
+          type: string
+      - name: currency
+        in: query
+        schema:
+          type: string
+      - name: dateOfBirth
+        in: query
+        schema:
+          type: string
+      - name: email
+        in: query
+        schema:
+          type: string
+      - name: employeeId
+        in: query
+        schema:
+          type: string
+      - name: firstName
+        in: query
+        schema:
+          type: string
+      - name: gender
+        in: query
+        schema:
+          type: string
+      - name: hireDate
+        in: query
+        schema:
+          type: string
+      - name: lastName
+        in: query
+        schema:
+          type: string
+      - name: nationalId
+        in: query
+        schema:
+          type: string
+      - name: organizationalLevel
+        in: query
+        schema:
+          type: integer
+          format: int32
       - name: page
         in: query
         schema:
@@ -128,6 +478,10 @@ paths:
         in: query
         schema:
           type: string
+      - name: terminated
+        in: query
+        schema:
+          type: boolean
       - name: type
         in: query
         schema:
@@ -177,6 +531,47 @@ paths:
         "403":
           description: Not Allowed
       summary: Get Active Employees
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:people
+  /api/organization/employees/count:
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      - name: inactive
+        in: query
+        schema:
+          type: boolean
+      - name: organizationalLevel
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: resigned
+        in: query
+        schema:
+          type: boolean
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: terminated
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Count Employees
       tags:
       - Organization Resource
       security:
@@ -245,6 +640,21 @@ paths:
       security:
       - SecurityScheme:
         - read:people
+  /api/organization/employees/salary-stats:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Salary Stats
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:salaries
   /api/organization/employees/unit/{unitId}:
     get:
       parameters:
@@ -423,7 +833,7 @@ paths:
       - Organization Resource
       security:
       - SecurityScheme:
-        - read:org-levels
+        - read:position-categories
     post:
       requestBody:
         content:
@@ -445,7 +855,39 @@ paths:
       - Organization Resource
       security:
       - SecurityScheme:
-        - write:org-levels
+        - write:position-categories
+  /api/organization/position-categories/count:
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      - name: deleted
+        in: query
+        schema:
+          type: boolean
+      - name: inactive
+        in: query
+        schema:
+          type: boolean
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Count Position Categories
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:position-categories
   /api/organization/position-categories/{id}:
     put:
       parameters:
@@ -474,7 +916,7 @@ paths:
       - Organization Resource
       security:
       - SecurityScheme:
-        - write:org-levels
+        - write:position-categories
     get:
       parameters:
       - name: id
@@ -494,7 +936,7 @@ paths:
       - Organization Resource
       security:
       - SecurityScheme:
-        - read:org-levels
+        - read:position-categories
     delete:
       parameters:
       - name: id
@@ -514,10 +956,23 @@ paths:
       - Organization Resource
       security:
       - SecurityScheme:
-        - write:org-levels
+        - write:position-categories
   /api/organization/positions:
     get:
       parameters:
+      - name: categoryId
+        in: query
+        schema:
+          type: string
+      - name: description
+        in: query
+        schema:
+          type: string
+      - name: hierarchicalLevel
+        in: query
+        schema:
+          type: integer
+          format: int32
       - name: page
         in: query
         schema:
@@ -528,6 +983,18 @@ paths:
         schema:
           type: integer
           format: int32
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: title
+        in: query
+        schema:
+          type: string
+      - name: unitId
+        in: query
+        schema:
+          type: string
       responses:
         "200":
           description: OK
@@ -579,6 +1046,42 @@ paths:
         "403":
           description: Not Allowed
       summary: Get Positions By Category
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:positions
+  /api/organization/positions/count:
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      - name: deleted
+        in: query
+        schema:
+          type: boolean
+      - name: inactive
+        in: query
+        schema:
+          type: boolean
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: vacant
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Count Positions
       tags:
       - Organization Resource
       security:
@@ -680,7 +1183,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/JobPosition"
+              $ref: "#/components/schemas/JobPositionDTO"
         required: true
       responses:
         "200":
@@ -800,6 +1303,35 @@ paths:
       security:
       - SecurityScheme:
         - read:replacements
+  /api/organization/replacements/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemporaryReplacementDTO"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Temporary Replacement
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:replacements
   /api/organization/replacements/{id}/cancel:
     post:
       parameters:
@@ -918,6 +1450,25 @@ paths:
         - read:salaries
   /api/organization/salary-history/recent:
     get:
+      parameters:
+      - name: endDate
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: months
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: startDate
+        in: query
+        schema:
+          type: string
       responses:
         "200":
           description: OK
@@ -931,6 +1482,35 @@ paths:
       security:
       - SecurityScheme:
         - read:salaries
+  /api/organization/salary-history/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalaryHistoryDTO"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+        "400":
+          description: Bad Request
+      summary: Update Salary History
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - write:salaries
   /api/organization/stats/employees:
     get:
       responses:
@@ -970,7 +1550,7 @@ paths:
           description: Not Authorized
         "403":
           description: Not Allowed
-      summary: Get Salary Stats
+      summary: Get Salary Stats Endpoint
       tags:
       - Organization Resource
       security:
@@ -979,6 +1559,31 @@ paths:
   /api/organization/units:
     get:
       parameters:
+      - name: costCenter
+        in: query
+        schema:
+          type: string
+      - name: country
+        in: query
+        schema:
+          type: string
+      - name: description
+        in: query
+        schema:
+          type: string
+      - name: location
+        in: query
+        schema:
+          type: string
+      - name: name
+        in: query
+        schema:
+          type: string
+      - name: organizationalLevel
+        in: query
+        schema:
+          type: integer
+          format: int32
       - name: page
         in: query
         schema:
@@ -989,6 +1594,10 @@ paths:
         schema:
           type: integer
           format: int32
+      - name: status
+        in: query
+        schema:
+          type: string
       responses:
         "200":
           description: OK
@@ -1024,6 +1633,125 @@ paths:
       security:
       - SecurityScheme:
         - write:org-units
+  /api/organization/units/count:
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      - name: deleted
+        in: query
+        schema:
+          type: boolean
+      - name: inactive
+        in: query
+        schema:
+          type: boolean
+      - name: leaf
+        in: query
+        schema:
+          type: boolean
+      - name: level
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: root
+        in: query
+        schema:
+          type: boolean
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: withChildren
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Count Units
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /api/organization/units/level-range:
+    get:
+      parameters:
+      - name: max
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - name: min
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Units By Organizational Level Range
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /api/organization/units/level/{level}:
+    get:
+      parameters:
+      - name: level
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Units By Organizational Level
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /api/organization/units/level/{level}/count:
+    get:
+      parameters:
+      - name: level
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Unit Count By Organizational Level
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
   /api/organization/units/root:
     get:
       responses:
@@ -1034,6 +1762,21 @@ paths:
         "403":
           description: Not Allowed
       summary: Get Root Units
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - read:org-units
+  /api/organization/units/structure-stats:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Organization Structure Stats
       tags:
       - Organization Resource
       security:
@@ -1051,7 +1794,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrganizationalUnit"
+              $ref: "#/components/schemas/OrganizationalUnitDTO"
         required: true
       responses:
         "200":
@@ -1129,6 +1872,14 @@ paths:
       security:
       - SecurityScheme:
         - read:org-units
+  /debug/health:
+    get:
+      responses:
+        "200":
+          description: OK
+      summary: Health
+      tags:
+      - Debug Resource
   /debug/me:
     get:
       responses:
@@ -1143,6 +1894,21 @@ paths:
       - Debug Resource
       security:
       - SecurityScheme: []
+  /debug/routes:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Routes
+      tags:
+      - Debug Resource
+      security:
+      - SecurityScheme:
+        - audit:read
   /debug/token:
     get:
       responses:
@@ -1759,6 +2525,69 @@ paths:
         - write:users
 components:
   schemas:
+    CreateEmployeeAssignmentDTO:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        positionId:
+          type: string
+        unitId:
+          type: string
+        managerId:
+          type: string
+        startDate:
+          $ref: "#/components/schemas/LocalDate"
+        endDate:
+          $ref: "#/components/schemas/LocalDate"
+        salary:
+          type: number
+        currency:
+          type: string
+        movementReason:
+          type: string
+        notes:
+          type: string
+    CurrencyExchangeRate:
+      type: object
+      required:
+      - objectID
+      - fromCurrency
+      - toCurrency
+      - exchangeRate
+      - effectiveDate
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        fromCurrency:
+          type: string
+        toCurrency:
+          type: string
+        exchangeRate:
+          type: number
+        effectiveDate:
+          $ref: "#/components/schemas/LocalDate"
+        expiryDate:
+          $ref: "#/components/schemas/LocalDate"
+        source:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+        dateCreated:
+          $ref: "#/components/schemas/LocalDateTime"
+        dateUpdated:
+          $ref: "#/components/schemas/LocalDateTime"
+        active:
+          type: boolean
+        expired:
+          type: boolean
+        effective:
+          type: boolean
+        valid:
+          type: boolean
     Employee:
       type: object
       required:
@@ -1849,23 +2678,22 @@ components:
         tenureInYears:
           type: integer
           format: int64
-    EmployeeAssignment:
+    EmployeeAssignmentDTO:
       type: object
       required:
-      - objectID
-      - employee
+      - employeeId
       - startDate
       properties:
         objectID:
           $ref: "#/components/schemas/ObjectID"
-        employee:
-          $ref: "#/components/schemas/Employee"
-        position:
-          $ref: "#/components/schemas/JobPosition"
-        unit:
-          $ref: "#/components/schemas/OrganizationalUnit"
-        manager:
-          $ref: "#/components/schemas/Employee"
+        employeeId:
+          type: string
+        positionId:
+          type: string
+        unitId:
+          type: string
+        managerId:
+          type: string
         startDate:
           $ref: "#/components/schemas/LocalDate"
         endDate:
@@ -1878,33 +2706,6 @@ components:
           type: string
         notes:
           type: string
-        dateCreated:
-          $ref: "#/components/schemas/LocalDateTime"
-        active:
-          type: boolean
-        historical:
-          type: boolean
-        current:
-          type: boolean
-        durationInDays:
-          type: integer
-          format: int64
-        durationInMonths:
-          type: integer
-          format: int64
-        durationInYears:
-          type: integer
-          format: int64
-        promotion:
-          type: boolean
-        demotion:
-          type: boolean
-        lateralMove:
-          type: boolean
-        termination:
-          type: boolean
-        resignation:
-          type: boolean
     ExtendedAttribute:
       type: object
       properties:
@@ -1929,10 +2730,6 @@ components:
           pattern: \S
         description:
           type: string
-        unit:
-          $ref: "#/components/schemas/OrganizationalUnit"
-        category:
-          $ref: "#/components/schemas/PositionCategory"
         hierarchicalLevel:
           type: integer
           format: int32
@@ -1958,6 +2755,36 @@ components:
           type: boolean
         deleted:
           type: boolean
+        unitId:
+          type: string
+        categoryId:
+          type: string
+    JobPositionDTO:
+      type: object
+      required:
+      - title
+      - status
+      - hierarchicalLevel
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        title:
+          type: string
+          pattern: \S
+        description:
+          type: string
+        jobCode:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        hierarchicalLevel:
+          type: integer
+          format: int32
+        unitId:
+          type: string
+        categoryId:
+          type: string
     LocalDate:
       type: string
       format: date
@@ -1980,6 +2807,7 @@ components:
       required:
       - objectID
       - name
+      - organizationalLevel
       - status
       properties:
         objectID:
@@ -1989,8 +2817,9 @@ components:
           pattern: \S
         description:
           type: string
-        parentUnit:
-          $ref: "#/components/schemas/OrganizationalUnit"
+        organizationalLevel:
+          type: integer
+          format: int32
         costCenter:
           type: string
         location:
@@ -2017,8 +2846,38 @@ components:
           type: boolean
         deleted:
           type: boolean
+        parentUnitId:
+          type: string
         root:
           type: boolean
+    OrganizationalUnitDTO:
+      type: object
+      required:
+      - name
+      - status
+      - organizationalLevel
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        name:
+          type: string
+          pattern: \S
+        description:
+          type: string
+        costCenter:
+          type: string
+        location:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+          pattern: \S
+        organizationalLevel:
+          type: integer
+          format: int32
+        parentUnitId:
+          type: string
     PositionCategory:
       type: object
       required:
@@ -2055,14 +2914,11 @@ components:
       type: object
       required:
       - objectID
-      - employee
       - newSalary
       - effectiveDate
       properties:
         objectID:
           $ref: "#/components/schemas/ObjectID"
-        employee:
-          $ref: "#/components/schemas/Employee"
         oldSalary:
           type: number
         newSalary:
@@ -2073,8 +2929,6 @@ components:
           $ref: "#/components/schemas/LocalDate"
         reason:
           type: string
-        approvedBy:
-          $ref: "#/components/schemas/Employee"
         dateCreated:
           $ref: "#/components/schemas/LocalDateTime"
         salaryIncrease:
@@ -2089,23 +2943,42 @@ components:
           type: boolean
         recent:
           type: boolean
+        employeeId:
+          type: string
+        approvedById:
+          type: string
+    SalaryHistoryDTO:
+      type: object
+      required:
+      - employeeId
+      - newSalary
+      - effectiveDate
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        employeeId:
+          type: string
+        oldSalary:
+          type: number
+        newSalary:
+          type: number
+        currency:
+          type: string
+        effectiveDate:
+          $ref: "#/components/schemas/LocalDate"
+        reason:
+          type: string
+        approvedById:
+          type: string
     TemporaryReplacement:
       type: object
       required:
       - objectID
-      - originalEmployee
-      - replacementEmployee
       - startDate
       - status
       properties:
         objectID:
           $ref: "#/components/schemas/ObjectID"
-        originalEmployee:
-          $ref: "#/components/schemas/Employee"
-        replacementEmployee:
-          $ref: "#/components/schemas/Employee"
-        position:
-          $ref: "#/components/schemas/JobPosition"
         startDate:
           $ref: "#/components/schemas/LocalDate"
         endDate:
@@ -2132,6 +3005,37 @@ components:
         durationInDays:
           type: integer
           format: int64
+        originalEmployeeId:
+          type: string
+        replacementEmployeeId:
+          type: string
+        positionId:
+          type: string
+    TemporaryReplacementDTO:
+      type: object
+      required:
+      - originalEmployeeId
+      - replacementEmployeeId
+      - startDate
+      - status
+      properties:
+        objectID:
+          $ref: "#/components/schemas/ObjectID"
+        originalEmployeeId:
+          type: string
+        replacementEmployeeId:
+          type: string
+        positionId:
+          type: string
+        startDate:
+          $ref: "#/components/schemas/LocalDate"
+        endDate:
+          $ref: "#/components/schemas/LocalDate"
+        reason:
+          type: string
+        status:
+          type: string
+          pattern: \S
     Tenant:
       type: object
       required:

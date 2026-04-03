@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs logs-db logs-api ps clean shell-db shell-api build test lint format check-env health
+.PHONY: help up down restart logs logs-db logs-api ps clean shell-db shell-api build test lint format check-env health openapi-gen
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -134,6 +134,10 @@ db-info: ## Muestra información de las migraciones
 
 db-reset: clean up ## Resetea la base de datos (borra todo y reinicia)
 	@echo "$(GREEN)✓ Base de datos reseteada$(NC)"
+
+openapi-gen: ## Genera openapi.yaml desde el spec de Quarkus
+	@echo "$(GREEN)📝 Generando OpenAPI spec desde Quarkus...$(NC)"
+	@curl -sf http://localhost:8080/q/openapi -o openapi.yaml && echo "$(GREEN)✓ openapi.yaml actualizado$(NC)" || echo "$(RED)✗ Error: Asegúrate de que el backend esté corriendo (make up)$(NC)"
 
 # Alias útiles
 start: up ## Alias para 'up'

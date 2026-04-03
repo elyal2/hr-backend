@@ -1292,14 +1292,18 @@ public class OrganizationService {
         long terminatedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_TERMINATED);
         long resignedEmployees = employeeRepository.count("status = ?1", Employee.STATUS_RESIGNED);
         
-        long fullTimeEmployees = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_FULL_TIME);
-        long partTimeEmployees = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_PART_TIME);
+        // Count by actual contract types in the database
+        long indefiniteContracts = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_INDEFINITE);
+        long fixedTermContracts = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_FIXED_TERM);
+        long projectBasedContracts = employeeRepository.count("contractType = ?1", Employee.CONTRACT_TYPE_PROJECT_BASED);
+        
+        // Count by employee type
         long contractors = employeeRepository.count("employeeType = ?1", Employee.EMPLOYEE_TYPE_CONTRACTOR);
         long interns = employeeRepository.count("employeeType = ?1", Employee.EMPLOYEE_TYPE_INTERN);
         
         return new EmployeeStats(
             totalEmployees, activeEmployees, inactiveEmployees, terminatedEmployees, resignedEmployees,
-            fullTimeEmployees, partTimeEmployees, contractors, interns
+            indefiniteContracts, fixedTermContracts, projectBasedContracts, contractors, interns
         );
     }
 
@@ -1425,21 +1429,23 @@ public class OrganizationService {
         private final long inactiveEmployees;
         private final long terminatedEmployees;
         private final long resignedEmployees;
-        private final long fullTimeEmployees;
-        private final long partTimeEmployees;
+        private final long indefiniteContracts;
+        private final long fixedTermContracts;
+        private final long projectBasedContracts;
         private final long contractors;
         private final long interns;
 
         public EmployeeStats(long totalEmployees, long activeEmployees, long inactiveEmployees,
-                           long terminatedEmployees, long resignedEmployees, long fullTimeEmployees,
-                           long partTimeEmployees, long contractors, long interns) {
+                           long terminatedEmployees, long resignedEmployees, long indefiniteContracts,
+                           long fixedTermContracts, long projectBasedContracts, long contractors, long interns) {
             this.totalEmployees = totalEmployees;
             this.activeEmployees = activeEmployees;
             this.inactiveEmployees = inactiveEmployees;
             this.terminatedEmployees = terminatedEmployees;
             this.resignedEmployees = resignedEmployees;
-            this.fullTimeEmployees = fullTimeEmployees;
-            this.partTimeEmployees = partTimeEmployees;
+            this.indefiniteContracts = indefiniteContracts;
+            this.fixedTermContracts = fixedTermContracts;
+            this.projectBasedContracts = projectBasedContracts;
             this.contractors = contractors;
             this.interns = interns;
         }
@@ -1450,8 +1456,9 @@ public class OrganizationService {
         public long getInactiveEmployees() { return inactiveEmployees; }
         public long getTerminatedEmployees() { return terminatedEmployees; }
         public long getResignedEmployees() { return resignedEmployees; }
-        public long getFullTimeEmployees() { return fullTimeEmployees; }
-        public long getPartTimeEmployees() { return partTimeEmployees; }
+        public long getIndefiniteContracts() { return indefiniteContracts; }
+        public long getFixedTermContracts() { return fixedTermContracts; }
+        public long getProjectBasedContracts() { return projectBasedContracts; }
         public long getContractors() { return contractors; }
         public long getInterns() { return interns; }
     }
