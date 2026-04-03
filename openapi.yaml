@@ -961,6 +961,21 @@ paths:
       security:
       - SecurityScheme:
         - stats:read
+  /api/organization/stats/salaries:
+    get:
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not Authorized
+        "403":
+          description: Not Allowed
+      summary: Get Salary Stats
+      tags:
+      - Organization Resource
+      security:
+      - SecurityScheme:
+        - stats:read
   /api/organization/units:
     get:
       parameters:

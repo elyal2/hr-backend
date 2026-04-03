@@ -762,6 +762,14 @@ public class OrganizationResource {
         return Response.ok(stats).build();
     }
 
+    @GET
+    @Path("/stats/salaries")
+    @RolesAllowed({STATS_READ})
+    public Response getSalaryStatsEndpoint() {
+        OrganizationService.SalaryStats stats = organizationService.getSalaryStats();
+        return Response.ok(stats).build();
+    }
+
     // Assignment statistics
     @GET
     @Path("/assignments/stats")

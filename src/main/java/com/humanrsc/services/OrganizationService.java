@@ -1032,16 +1032,46 @@ public class OrganizationService {
     public OrganizationStats getOrganizationStats() {
         long totalEmployees = employeeRepository.count();
         long activeEmployees = employeeRepository.count("status = ?1", Employee.STATUS_ACTIVE);
-        long totalUnits = organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
-        long totalPositions = jobPositionRepository.count("status = ?1", JobPosition.STATUS_ACTIVE);
-        long totalCategories = positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_ACTIVE);
+        
+        long totalUnits = organizationalUnitRepository.count();
+        long activeUnits = organizationalUnitRepository.count("status = ?1", OrganizationalUnit.STATUS_ACTIVE);
+        
+        long totalPositions = jobPositionRepository.count();
+        long activePositions = jobPositionRepository.count("status = ?1", JobPosition.STATUS_ACTIVE);
+        
+        // Calculate vacant positions (active positions without active assignments)
+        long activeAssignments = employeeAssignmentRepository.count("endDate is null");
+        long vacantPositions = activePositions - activeAssignments;
+        if (vacantPositions < 0) vacantPositions = 0; // Ensure non-negative
+        
+        long totalCategories = positionCategoryRepository.count();
+        long activeCategories = positionCategoryRepository.count("status = ?1", PositionCategory.STATUS_ACTIVE);
+        
+        // Calculate max organizational level (from units)
+        int maxOrganizationalLevel = organizationalUnitRepository.find("status = ?1 order by organizationalLevel desc", 
+            OrganizationalUnit.STATUS_ACTIVE)
+            .firstResultOptional()
+            .map(unit -> unit.getOrganizationalLevel())
+            .orElse(0);
+        
+        // Calculate max hierarchical level (from positions)
+        int maxHierarchicalLevel = jobPositionRepository.find("status = ?1 order by hierarchicalLevel desc", 
+            JobPosition.STATUS_ACTIVE)
+            .firstResultOptional()
+            .map(pos -> pos.getHierarchicalLevel())
+            .orElse(0);
         
         BigDecimal avgSalary = employeeRepository.getAverageSalary();
         BigDecimal maxSalary = employeeRepository.getMaxSalary();
         BigDecimal minSalary = employeeRepository.getMinSalary();
         
         return new OrganizationStats(
-            totalEmployees, activeEmployees, totalUnits, totalPositions, totalCategories,
+            totalEmployees, activeEmployees,
+            totalUnits, activeUnits,
+            totalPositions, activePositions, vacantPositions,
+            activeAssignments,
+            totalCategories, activeCategories,
+            maxOrganizationalLevel, maxHierarchicalLevel,
             avgSalary, maxSalary, minSalary
         );
     }
@@ -1334,20 +1364,38 @@ public class OrganizationService {
         private final long totalEmployees;
         private final long activeEmployees;
         private final long totalUnits;
+        private final long activeUnits;
         private final long totalPositions;
+        private final long activePositions;
+        private final long vacantPositions;
+        private final long activeAssignments;
         private final long totalCategories;
+        private final long activeCategories;
+        private final int maxOrganizationalLevel;
+        private final int maxHierarchicalLevel;
         private final BigDecimal avgSalary;
         private final BigDecimal maxSalary;
         private final BigDecimal minSalary;
 
-        public OrganizationStats(long totalEmployees, long activeEmployees, long totalUnits, 
-                               long totalPositions, long totalCategories, BigDecimal avgSalary, 
-                               BigDecimal maxSalary, BigDecimal minSalary) {
+        public OrganizationStats(long totalEmployees, long activeEmployees, 
+                               long totalUnits, long activeUnits,
+                               long totalPositions, long activePositions, long vacantPositions,
+                               long activeAssignments,
+                               long totalCategories, long activeCategories,
+                               int maxOrganizationalLevel, int maxHierarchicalLevel,
+                               BigDecimal avgSalary, BigDecimal maxSalary, BigDecimal minSalary) {
             this.totalEmployees = totalEmployees;
             this.activeEmployees = activeEmployees;
             this.totalUnits = totalUnits;
+            this.activeUnits = activeUnits;
             this.totalPositions = totalPositions;
+            this.activePositions = activePositions;
+            this.vacantPositions = vacantPositions;
+            this.activeAssignments = activeAssignments;
             this.totalCategories = totalCategories;
+            this.activeCategories = activeCategories;
+            this.maxOrganizationalLevel = maxOrganizationalLevel;
+            this.maxHierarchicalLevel = maxHierarchicalLevel;
             this.avgSalary = avgSalary;
             this.maxSalary = maxSalary;
             this.minSalary = minSalary;
@@ -1357,8 +1405,15 @@ public class OrganizationService {
         public long getTotalEmployees() { return totalEmployees; }
         public long getActiveEmployees() { return activeEmployees; }
         public long getTotalUnits() { return totalUnits; }
+        public long getActiveUnits() { return activeUnits; }
         public long getTotalPositions() { return totalPositions; }
+        public long getActivePositions() { return activePositions; }
+        public long getVacantPositions() { return vacantPositions; }
+        public long getActiveAssignments() { return activeAssignments; }
         public long getTotalCategories() { return totalCategories; }
+        public long getActiveCategories() { return activeCategories; }
+        public int getMaxOrganizationalLevel() { return maxOrganizationalLevel; }
+        public int getMaxHierarchicalLevel() { return maxHierarchicalLevel; }
         public BigDecimal getAvgSalary() { return avgSalary; }
         public BigDecimal getMaxSalary() { return maxSalary; }
         public BigDecimal getMinSalary() { return minSalary; }
